@@ -13,6 +13,7 @@ const state = {
   auctionLocked: false,
   feedLog: [],
   selectedLang: 'JavaScript',   // default selected language chip
+  auctionPhase: 'WAITING',      // WAITING | LIVE | PAUSED | SOLVING | ENDED
 };
 
 // ── Bug Pool ────────────────────────────────────────────
@@ -48,6 +49,7 @@ function renderPage() {
   }
   attachEvents();
   if (state.page === 'admin-dashboard') startSimulation();
+  if (state.page === 'team-auction') startTeamPoll();
 }
 
 function go(page) {
@@ -65,6 +67,19 @@ function nowStr() {
 function addFeed(msg, type = '') {
   state.feedLog.unshift({ msg, type, time: nowStr() });
   if (state.feedLog.length > 30) state.feedLog.pop();
+}
+
+// ── Auction Phase Styles ────────────────────────────────
+const PHASE_STYLE = {
+  WAITING: { cls: 'badge-gray', label: '⏳ WAITING' },
+  LIVE: { cls: 'badge-green', label: '🟢 LIVE' },
+  PAUSED: { cls: 'badge-amber', label: '⏸ PAUSED' },
+  SOLVING: { cls: 'badge-purple', label: '🔧 SOLVING' },
+  ENDED: { cls: 'badge-blue', label: '🏁 ENDED' },
+};
+function phaseBadgeHtml(phase) {
+  const s = PHASE_STYLE[phase] || PHASE_STYLE.WAITING;
+  return `<span class="badge ${s.cls}" style="font-size:0.62rem;padding:5px 13px;letter-spacing:1px">STATUS: ${s.label}</span>`;
 }
 
 // ────────────────────────────────────────────────────────
@@ -186,6 +201,7 @@ function AdminDashboardPage() {
           <div class="room-chip-dot"></div>
           ROOM: ${state.roomId || 'ARENA-X'}
         </div>
+        <div id="admin-phase-badge">${phaseBadgeHtml(state.auctionPhase)}</div>
       </div>
       <div class="btn-row">
         <button class="btn btn-blue btn-sm" onclick="go('leaderboard')">📊 RANKINGS</button>
@@ -257,11 +273,14 @@ function AdminDashboardPage() {
             <div style="margin-bottom:16px">
               <div class="panel-title mb-12">Auction Controls</div>
               <div class="btn-row">
-                <button class="btn btn-green" id="start-btn" onclick="adminStartAuction()">▶ START BIDDING</button>
-                <button class="btn btn-purple" onclick="adminPauseAuction()">⏸ PAUSE</button>
+                <button class="btn btn-green" id="start-btn" onclick="adminStartAuction()"
+                  ${['LIVE', 'SOLVING', 'ENDED'].includes(state.auctionPhase) ? 'disabled' : ''})>▶ START BIDDING</button>
+                <button class="btn btn-purple" id="pause-btn" onclick="adminPauseAuction()"
+                  ${state.auctionPhase !== 'LIVE' ? 'disabled' : ''})>⏸ PAUSE</button>
               </div>
             </div>
-            <button class="btn btn-amber btn-full mb-16" id="lock-btn" onclick="adminLockAuction()">
+            <button class="btn btn-amber btn-full mb-16" id="lock-btn" onclick="adminLockAuction()"
+              ${['WAITING', 'PAUSED', 'SOLVING', 'ENDED'].includes(state.auctionPhase) ? 'disabled' : ''})>
               🔒 LOCK AUCTION &amp; START SOLVING
             </button>
 
@@ -418,6 +437,7 @@ function TeamAuctionPage() {
           <div class="room-chip-dot" style="background:var(--neon-purple);box-shadow:0 0 8px var(--neon-purple)"></div>
           ${state.roomId || 'ARENA-X'}
         </div>
+        <div id="team-phase-badge">${phaseBadgeHtml(state.auctionPhase)}</div>
       </div>
       <div class="btn-row">
         <div class="badge badge-green" style="padding:8px 16px;font-size:0.7rem">${name}</div>
@@ -468,6 +488,7 @@ function TeamAuctionPage() {
             </div>
 
             <!-- BUY Section -->
+            <div id="team-buy-section">
             ${state.hasBought ? `
               <div class="buy-confirmed">
                 <span style="font-size:1.4rem">✅</span>
@@ -475,13 +496,22 @@ function TeamAuctionPage() {
                   <div class="orbitron neon-green" style="font-size:0.78rem;margin-bottom:4px">BUY REQUEST SENT</div>
                   <div class="text-sm text-sec">Waiting for Admin to confirm lock...</div>
                 </div>
+              </div>` : state.auctionPhase === 'SOLVING' ? `
+              <div class="buy-confirmed" style="background:rgba(188,19,254,0.07);border:1px solid rgba(188,19,254,0.3)">
+                <span style="font-size:1.4rem">🔧</span>
+                <div>
+                  <div class="orbitron neon-purple" style="font-size:0.78rem;margin-bottom:4px">SOLVING PHASE ACTIVE</div>
+                  <div class="text-sm text-sec">Auction locked. Solve your bug to earn the reward.</div>
+                </div>
               </div>` : `
-              <button class="btn btn-green btn-full" style="font-size:1rem;min-height:60px" id="buy-btn" onclick="teamBuy()">
-                🐛 CLICK TO BUY THIS BUG
+              <button class="btn btn-green btn-full" style="font-size:1rem;min-height:60px" id="buy-btn"
+                onclick="teamBuy()" ${state.auctionPhase !== 'LIVE' ? 'disabled' : ''})>
+                ${state.auctionPhase === 'LIVE' ? '🐛 CLICK TO BUY THIS BUG' : '🔒 AUCTION ' + state.auctionPhase}
               </button>
               <div class="text-xs text-sec mt-12 text-center">
-                Clicking BUY will notify the Admin panel instantly
+                ${state.auctionPhase === 'LIVE' ? 'Clicking BUY will notify the Admin panel instantly' : 'Waiting for Admin to start the auction...'}
               </div>`}
+            </div>
           </div>
 
           <!-- Strategy Tip Card -->
@@ -541,11 +571,22 @@ function TeamAuctionPage() {
 }
 
 window.teamBuy = () => {
+  if (state.auctionPhase !== 'LIVE') return; // guard: only allowed when LIVE
   state.hasBought = true;
   if (state.walletBalance >= (state.currentBug?.value || 0)) {
     state.walletBalance -= (state.currentBug?.value || 0);
   }
-  addFeed(`${state.teamName || 'A team'} clicked BUY on ${state.currentBug?.id}`, 'purple');
+  const teamName = state.teamName || 'A team';
+  addFeed(`${teamName} clicked BUY on ${state.currentBug?.id}`, 'purple');
+  // Notify admin panel's buy-indicator if it's in the DOM (same-tab simulation)
+  const ind = document.getElementById('buy-indicator');
+  const buyT = document.getElementById('buying-team');
+  if (ind && buyT) {
+    buyT.textContent = teamName;
+    ind.style.display = 'flex';
+    ind.style.gap = '12px';
+    ind.style.alignItems = 'center';
+  }
   renderPage();
 };
 
@@ -644,22 +685,39 @@ window.createRoom = () => {
 };
 
 window.adminStartAuction = () => {
-  addFeed(`Auction started for ${state.currentBug?.id}`, 'green');
+  state.auctionPhase = 'LIVE';
+  addFeed(`🟢 Auction LIVE — ${state.currentBug?.id} open for bids`, 'green');
   refreshFeed();
   document.getElementById('bug-status').innerHTML = '<span class="badge badge-green">LIVE</span>';
+  updatePhaseDisplay();
+  // Update button states
+  document.getElementById('start-btn')?.setAttribute('disabled', true);
+  document.getElementById('pause-btn')?.removeAttribute('disabled');
+  document.getElementById('lock-btn')?.removeAttribute('disabled');
 };
 
 window.adminPauseAuction = () => {
-  addFeed('Auction paused by admin', 'amber');
+  state.auctionPhase = 'PAUSED';
+  addFeed('⏸ Auction paused by admin', 'amber');
   refreshFeed();
   document.getElementById('bug-status').innerHTML = '<span class="badge badge-amber">PAUSED</span>';
+  updatePhaseDisplay();
+  // Update button states
+  document.getElementById('start-btn')?.removeAttribute('disabled');
+  document.getElementById('pause-btn')?.setAttribute('disabled', true);
+  document.getElementById('lock-btn')?.setAttribute('disabled', true);
 };
 
 window.adminLockAuction = () => {
   state.auctionLocked = true;
-  addFeed(`🔒 Auction locked — Solving phase started!`, 'purple');
+  state.auctionPhase = 'SOLVING';
+  addFeed('🔒 Auction LOCKED — SOLVING phase started!', 'purple');
   refreshFeed();
-  document.getElementById('bug-status').innerHTML = '<span class="badge badge-purple">LOCKED</span>';
+  document.getElementById('bug-status').innerHTML = '<span class="badge badge-purple">SOLVING</span>';
+  updatePhaseDisplay();
+  // Disable all auction control buttons
+  document.getElementById('start-btn')?.setAttribute('disabled', true);
+  document.getElementById('pause-btn')?.setAttribute('disabled', true);
   document.getElementById('lock-btn')?.setAttribute('disabled', true);
 };
 
@@ -715,6 +773,54 @@ function refreshFeed() {
       ${f.msg}
       <div class="feed-time">${f.time}</div>
     </div>`).join('');
+}
+
+// ── Phase display updater ────────────────────────────────────
+// Updates any phase badge in the current DOM without full page re-render
+function updatePhaseDisplay() {
+  const html = phaseBadgeHtml(state.auctionPhase);
+  const adminBadge = document.getElementById('admin-phase-badge');
+  if (adminBadge) adminBadge.innerHTML = html;
+  const teamBadge = document.getElementById('team-phase-badge');
+  if (teamBadge) teamBadge.innerHTML = html;
+}
+
+// ── Team-side live polling (reflects admin phase changes) ─────────
+let teamPollInterval = null;
+function startTeamPoll() {
+  if (teamPollInterval) clearInterval(teamPollInterval);
+  teamPollInterval = setInterval(() => {
+    if (state.page !== 'team-auction') { clearInterval(teamPollInterval); return; }
+
+    // 1. Update phase badge
+    const badge = document.getElementById('team-phase-badge');
+    if (badge) badge.innerHTML = phaseBadgeHtml(state.auctionPhase);
+
+    // 2. Update BUY section only if team hasn't bought yet
+    const buySection = document.getElementById('team-buy-section');
+    if (!buySection || state.hasBought) return;
+
+    if (state.auctionPhase === 'SOLVING') {
+      buySection.innerHTML = `
+        <div class="buy-confirmed" style="background:rgba(188,19,254,0.07);border:1px solid rgba(188,19,254,0.3)">
+          <span style="font-size:1.4rem">🔧</span>
+          <div>
+            <div class="orbitron neon-purple" style="font-size:0.78rem;margin-bottom:4px">SOLVING PHASE ACTIVE</div>
+            <div class="text-sm text-sec">Auction locked. Solve your bug to earn the reward.</div>
+          </div>
+        </div>`;
+    } else {
+      const isLive = state.auctionPhase === 'LIVE';
+      buySection.innerHTML = `
+        <button class="btn btn-green btn-full" style="font-size:1rem;min-height:60px" id="buy-btn"
+          onclick="teamBuy()" ${isLive ? '' : 'disabled'})>
+          ${isLive ? '🐛 CLICK TO BUY THIS BUG' : '🔒 AUCTION ' + state.auctionPhase}
+        </button>
+        <div class="text-xs text-sec mt-12 text-center">
+          ${isLive ? 'Clicking BUY will notify the Admin panel instantly' : 'Waiting for Admin to start the auction...'}
+        </div>`;
+    }
+  }, 700);
 }
 
 // ── Live Simulation (Admin Dashboard) ──────────────────
