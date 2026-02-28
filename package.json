@@ -1,13 +1,16 @@
 {
-  "name": "bug_auction_arena",
+  "name": "bug-auction-arena",
   "version": "1.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
-  "devDependencies": {
-    "vite": "^5.4.11"
+  "dependencies": {
+    "mongoose": "^8.9.3",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   }
 }
