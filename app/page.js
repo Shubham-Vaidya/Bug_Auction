@@ -127,36 +127,64 @@ export default function Home() {
         const target = group.querySelector(`[data-lang="${lang}"]`);
         if (target) target.classList.add('selected');
       },
-      teamBuy: () => {
+      teamBuy: async () => {
         if (state.auctionPhase !== 'LIVE') return;
-        state.hasBought = true;
-        if (state.walletBalance >= (state.currentBug?.value || 0)) {
-          state.walletBalance -= (state.currentBug?.value || 0);
+
+        try {
+          const res = await fetch('/api/auction/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              teamId: state.teamId || 'dummy-team-id', // Assuming state.teamId is set elsewhere
+              bugId: state.currentBug?.id || null,
+              purchasePrice: state.currentBug?.value || 0
+            })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            state.hasBought = true;
+            if (data.user && typeof data.user.wallet !== 'undefined') {
+              state.walletBalance = data.user.wallet;
+            }
+            const teamName = state.teamName || 'A team';
+            addFeed(`${teamName} clicked BUY on ${state.currentBug?.id}`, 'purple');
+            const ind = document.getElementById('buy-indicator');
+            const buyT = document.getElementById('buying-team');
+            if (ind && buyT) {
+              buyT.textContent = teamName;
+              ind.style.display = 'flex';
+              ind.style.gap = '12px';
+              ind.style.alignItems = 'center';
+            }
+            renderPage();
+          } else {
+            alert('Failed to buy: ' + data.error);
+          }
+        } catch (error) {
+          console.error("Error making purchase:", error);
+          alert('Network error when making purchase');
         }
-        const teamName = state.teamName || 'A team';
-        addFeed(`${teamName} clicked BUY on ${state.currentBug?.id}`, 'purple');
-        const ind = document.getElementById('buy-indicator');
-        const buyT = document.getElementById('buying-team');
-        if (ind && buyT) {
-          buyT.textContent = teamName;
-          ind.style.display = 'flex';
-          ind.style.gap = '12px';
-          ind.style.alignItems = 'center';
-        }
-        renderPage();
       },
-      createRoom: () => {
-        const id = 'ARENA-' + Math.random().toString(36).substr(2, 4).toUpperCase();
-        state.roomId = id;
-        addFeed(`New room created: ${id}`, 'green');
-        refreshFeed();
-        const display = document.getElementById('room-id-display');
-        if (display) {
-          display.innerHTML = `<div class="text-xs text-sec mb-8" style="letter-spacing:2px">ACTIVE ROOM ID</div>
-            <div class="orbitron neon-green" style="font-size:1.3rem;letter-spacing:4px">${id}</div>`;
+      createRoom: async () => {
+        try {
+          const res = await fetch('/api/rooms/create', { method: 'POST' });
+          const data = await res.json();
+          const id = data?.room?.roomId || 'ARENA-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+          state.roomId = id;
+          addFeed(`New room created: ${id}`, 'green');
+          refreshFeed();
+          const display = document.getElementById('room-id-display');
+          if (display) {
+            display.innerHTML = `<div class="text-xs text-sec mb-8" style="letter-spacing:2px">ACTIVE ROOM ID</div>
+              <div class="orbitron neon-green" style="font-size:1.3rem;letter-spacing:4px">${id}</div>`;
+          }
+          const chips = document.querySelectorAll('.room-chip');
+          chips.forEach(c => { c.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = ` ROOM: ${id}`; }); });
+        } catch (error) {
+          console.error("Error creating room:", error);
         }
-        const chips = document.querySelectorAll('.room-chip');
-        chips.forEach(c => { c.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = ` ROOM: ${id}`; }); });
       },
       adminStartAuction: () => {
         state.auctionPhase = 'LIVE';
