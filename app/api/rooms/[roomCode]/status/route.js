@@ -7,7 +7,8 @@ export async function GET(request, { params }) {
         await dbConnect();
         const { roomCode } = await params;
 
-        const room = await Room.findOne({ roomId: roomCode.toUpperCase() });
+        const room = await Room.findOne({ roomId: roomCode.toUpperCase() })
+            .populate("activeBug", "bugId name description marketValue difficulty tag");
         if (!room) {
             return NextResponse.json(
                 { error: "Room not found" },
@@ -24,6 +25,7 @@ export async function GET(request, { params }) {
                 coinsPerTeam: room.coinsPerTeam,
                 status: room.status,
                 createdAt: room.createdAt,
+                activeBug: room.activeBug || null,
             },
         });
     } catch (error) {

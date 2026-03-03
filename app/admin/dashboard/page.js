@@ -17,6 +17,9 @@ export default function AdminDashboard() {
     const [roomName, setRoomName] = useState("");
     const [coinsPerTeam, setCoinsPerTeam] = useState(5000);
 
+    // Active (shown) bug
+    const [activeBugId, setActiveBugId] = useState(null);
+
     // Allot modal
     const [allotModal, setAllotModal] = useState(null); // { bug, teamPlayerId, price }
     const [allotPrice, setAllotPrice] = useState(0);
@@ -100,6 +103,24 @@ export default function AdminDashboard() {
                 fetchBugs();
             }
         } catch (err) { addFeed("Failed to seed bugs", "amber"); }
+    };
+
+    const handleShowBug = async (bug) => {
+        if (!selectedRoom) return;
+        try {
+            const res = await fetch(`/api/rooms/${selectedRoom.roomId}/show`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user._id, bugId: bug._id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setActiveBugId(bug._id);
+                addFeed(`🔴 LIVE: ${bug.bugId} – ${bug.name}`, "blue");
+            } else {
+                addFeed(data.error, "amber");
+            }
+        } catch (err) { addFeed("Failed to reveal bug", "amber"); }
     };
 
     const handleAllot = async () => {
@@ -308,7 +329,16 @@ export default function AdminDashboard() {
                                                     <span className="bug-meta-label">Difficulty</span>
                                                     <span className={`bug-meta-value ${diffColor}`}>{bug.difficulty}</span>
                                                 </div>
-                                                <div className="bug-meta-item">
+                                                <div className="bug-meta-item" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                    {selectedRoom && (
+                                                        <button
+                                                            className="btn btn-blue btn-sm"
+                                                            onClick={() => handleShowBug(bug)}
+                                                            style={activeBugId === bug._id ? { background: 'var(--neon-blue)', color: '#000' } : {}}
+                                                        >
+                                                            {activeBugId === bug._id ? '🔴 LIVE' : '👁 SHOW'}
+                                                        </button>
+                                                    )}
                                                     {selectedRoom && teams.length > 0 && (
                                                         <button className="btn btn-purple btn-sm" onClick={() => { setAllotModal(bug); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
                                                             🎯 ALLOT

@@ -25,6 +25,11 @@ const RoomSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
         },
+        activeBug: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Bug",
+            default: null,
+        },
     },
     { timestamps: true }
 );

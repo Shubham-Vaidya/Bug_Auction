@@ -100,8 +100,44 @@ export default function TeamPage({ params }) {
                 )}
 
                 <div className="auction-team-layout">
-                    {/* Left: Team Info + Purchased Bugs */}
+                    {/* Left: Live Bug + Team Portfolio (Purchased Bugs) */}
                     <div className="panel">
+                        {/* LIVE BUG Section */}
+                        <div className="card" style={{ marginBottom: '4px', border: 'none', boxShadow: 'none' }}>
+                            <div className="panel-title underline-blue">Live Auction</div>
+                            <h3 className="orbitron mb-20 neon-blue" style={{ fontSize: '1rem' }}>LIVE BUG</h3>
+
+                            {room?.activeBug ? (() => {
+                                const ab = room.activeBug;
+                                const diffColor = ab.difficulty === "Expert" ? "neon-purple" : ab.difficulty === "Hard" ? "neon-amber" : ab.difficulty === "Medium" ? "neon-blue" : "neon-green";
+                                return (
+                                    <div className="bug-card" style={{ marginBottom: 0, border: '1px solid rgba(0,242,255,0.35)', background: 'rgba(0,242,255,0.04)' }}>
+                                        <div className="bug-card-id">BUG ID: {ab.bugId} &nbsp; {ab.tag}</div>
+                                        <div className="bug-card-name">{ab.name}</div>
+                                        <div className="text-xs text-sec mb-12">{ab.description}</div>
+                                        <div className="bug-card-meta">
+                                            <div className="bug-meta-item">
+                                                <span className="bug-meta-label">Market Value</span>
+                                                <span className="bug-meta-value neon-green">₹{ab.marketValue?.toLocaleString()}</span>
+                                            </div>
+                                            <div className="bug-meta-item">
+                                                <span className="bug-meta-label">Difficulty</span>
+                                                <span className={`bug-meta-value ${diffColor}`}>{ab.difficulty}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })() : (
+                                <div className="text-center" style={{ padding: '32px 20px' }}>
+                                    <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>🔍</div>
+                                    <div className="text-sec" style={{ fontSize: '0.85rem' }}>
+                                        Waiting for admin to reveal a bug...
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* BUGS ACQUIRED Section */}
                         <div className="card border-purple pulse-purple">
                             <div className="panel-title">Your Portfolio</div>
                             <h3 className="orbitron mb-24" style={{ fontSize: '1rem' }}>BUGS ACQUIRED</h3>
@@ -135,10 +171,11 @@ export default function TeamPage({ params }) {
                         </div>
                     </div>
 
+
                     {/* Right: Leaderboard + Stats */}
                     <div className="panel">
-                        <div className="card">
-                            <div className="panel-title mb-16">Live Rankings</div>
+                        <div className="card border-white-subtle">
+                            <div className="panel-title mb-16" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>Live Rankings</div>
                             {leaderboard.map((t, i) => {
                                 const isMe = t.odid === user?._id;
                                 const rankEmoji = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
@@ -163,25 +200,24 @@ export default function TeamPage({ params }) {
 
                         {/* Team Stats */}
                         {myData && (
-                            <div className="card">
-                                <div className="panel-title mb-16">Your Stats</div>
+                            <div className="card border-white-subtle">
+                                <div className="panel-title mb-16" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>Your Stats</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                                    <div className="stats-row-item">
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>TEAM</span>
-                                        <span className="font-bold" style={{ fontSize: '0.9rem' }}>{myData.teamName}</span>
+                                        <span className="font-bold orbitron neon-blue" style={{ fontSize: '0.9rem' }}>{myData.teamName}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                                    <div className="stats-row-item">
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>WALLET</span>
                                         <span className="orbitron neon-green">₹{myData.coins?.toLocaleString()}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                                    <div className="stats-row-item">
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>BUGS WON</span>
                                         <span className="orbitron neon-purple">{myData.bugsWon}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                                    <div className="stats-row-item">
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>ROOM</span>
-                                        <span className="mono" style={{ fontSize: '0.82rem' }}>{room?.roomId || roomCode}</span>
-
+                                        <span className="mono neon-amber" style={{ fontSize: '0.82rem' }}>{room?.roomId || roomCode}</span>
                                     </div>
                                 </div>
                             </div>
