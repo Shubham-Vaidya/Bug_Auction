@@ -7,9 +7,13 @@ const BugSchema = new mongoose.Schema(
             required: true,
             unique: true,
         },
-        title: {
+        name: {
             type: String,
             required: true,
+        },
+        description: {
+            type: String,
+            default: "",
         },
         marketValue: {
             type: Number,
@@ -17,10 +21,16 @@ const BugSchema = new mongoose.Schema(
         },
         difficulty: {
             type: String,
+            enum: ["Easy", "Medium", "Hard", "Expert"],
+            default: "Medium",
+        },
+        tag: {
+            type: String,
+            default: "🟡",
         },
         languageVersions: {
-            type: Object, // key-value pair of language -> question text
-            default: {}
+            type: Object,
+            default: {},
         },
     },
     { timestamps: true }

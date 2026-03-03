@@ -2,34 +2,26 @@ import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
     {
-        name: {
+        username: {
             type: String,
+            required: true,
+            unique: true,
+            trim: true,
         },
         teamName: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        password: {
             type: String,
             required: true,
         },
         role: {
             type: String,
-            default: "team",
-            enum: ["admin", "team"],
+            default: "player",
+            enum: ["admin", "player"],
         },
-        language: {
-            type: String,
-        },
-        roomId: {
-            type: String,
-        },
-        wallet: {
-            type: Number,
-            default: 5000,
-        },
-        bugsWon: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Bug",
-            },
-        ]
     },
     { timestamps: true }
 );

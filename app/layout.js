@@ -3,6 +3,9 @@ import './globals.css';
 export const metadata = {
   title: 'Bug Auction Arena | Live Coding Platform',
   description: 'A futuristic live auction and coding contest platform for hackers and developers.',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({ children }) {

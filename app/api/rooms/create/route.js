@@ -2,47 +2,58 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 
-// Helper function to generate a random 6-character uppercase string
-function generateRoomId() {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
+function generateRoomCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "ARENA-";
+    for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return result;
+    return code;
 }
 
-export async function POST(req) {
+export async function POST(request) {
     try {
         await dbConnect();
+        const { roomName, coinsPerTeam, userId } = await request.json();
 
-        // Generate a unique 6-character room ID
-        const roomId = generateRoomId();
-
-        // Attempt to parse request body to check if createdBy was passed
-        let body = {};
-        try {
-            body = await req.json();
-        } catch (e) {
-            // Body may be empty, which is fine
+        if (!roomName || !userId) {
+            return NextResponse.json(
+                { error: "Room name and user ID are required" },
+                { status: 400 }
+            );
         }
 
-        // Create the room document in the database
-        const newRoom = await Room.create({
-            roomId: roomId,
-            createdBy: body.createdBy || null,
+        // Generate unique room code
+        let roomId;
+        let isUnique = false;
+        while (!isUnique) {
+            roomId = generateRoomCode();
+            const existing = await Room.findOne({ roomId });
+            if (!existing) isUnique = true;
+        }
+
+        const room = await Room.create({
+            roomId,
+            roomName: roomName.trim(),
+            coinsPerTeam: coinsPerTeam || 5000,
             status: "WAITING",
-            teams: [],
+            createdBy: userId,
         });
 
-        return NextResponse.json(
-            { success: true, room: newRoom },
-            { status: 201 }
-        );
+        return NextResponse.json({
+            success: true,
+            room: {
+                _id: room._id,
+                roomId: room.roomId,
+                roomName: room.roomName,
+                coinsPerTeam: room.coinsPerTeam,
+                status: room.status,
+            },
+        });
     } catch (error) {
-        console.error("Error creating room:", error);
+        console.error("Create room error:", error);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { error: "Failed to create room" },
             { status: 500 }
         );
     }

@@ -1,0 +1,152 @@
+[
+    {
+        "bugId": "BUG-101",
+        "name": "Auth Bypass Exploit",
+        "description": "A critical authentication bypass vulnerability that allows unauthorized access to admin endpoints. Requires deep understanding of JWT token validation.",
+        "marketValue": 2000,
+        "difficulty": "Expert",
+        "tag": "💀",
+        "languageVersions": {
+            "JavaScript": "Fix the JWT validation middleware in auth.js",
+            "Python": "Fix the JWT validation decorator in auth.py",
+            "C++": "Fix the token parser in auth_handler.cpp",
+            "Java": "Fix the AuthFilter class in AuthFilter.java",
+            "C": "Fix the token validation in auth.c"
+        }
+    },
+    {
+        "bugId": "BUG-202",
+        "name": "Race Condition in Scheduler",
+        "description": "A race condition in the task scheduler causes duplicate job execution under high concurrency. Must implement proper mutex locking.",
+        "marketValue": 1500,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "JavaScript": "Fix the async scheduler in scheduler.js",
+            "Python": "Fix the threading issue in scheduler.py",
+            "C++": "Fix the mutex lock in scheduler.cpp",
+            "Java": "Fix the synchronized block in Scheduler.java",
+            "C": "Fix the pthread mutex in scheduler.c"
+        }
+    },
+    {
+        "bugId": "BUG-303",
+        "name": "Null Pointer Dereference",
+        "description": "Accessing an uninitialized pointer in the data processing pipeline causes segmentation faults under certain input patterns.",
+        "marketValue": 600,
+        "difficulty": "Easy",
+        "tag": "🟢",
+        "languageVersions": {
+            "JavaScript": "Fix the null check in processor.js",
+            "Python": "Fix the None check in processor.py",
+            "C++": "Fix the nullptr check in processor.cpp",
+            "Java": "Fix the NullPointerException in Processor.java",
+            "C": "Fix the NULL check in processor.c"
+        }
+    },
+    {
+        "bugId": "BUG-404",
+        "name": "Memory Leak in Galaxy Filter",
+        "description": "The galaxy filter module leaks memory on each render cycle due to unreleased texture buffers. Leads to eventual OOM crash.",
+        "marketValue": 1200,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "JavaScript": "Fix the buffer cleanup in galaxyFilter.js",
+            "Python": "Fix the memory management in galaxy_filter.py",
+            "C++": "Fix the destructor in GalaxyFilter.cpp",
+            "Java": "Fix the resource cleanup in GalaxyFilter.java",
+            "C": "Fix the free() calls in galaxy_filter.c"
+        }
+    },
+    {
+        "bugId": "BUG-500",
+        "name": "Database Recursive Loop",
+        "description": "A self-referencing foreign key creates an infinite recursive query loop when fetching nested comments. Needs query depth limiting.",
+        "marketValue": 800,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "JavaScript": "Fix the recursive query in comments.js",
+            "Python": "Fix the recursive ORM query in comments.py",
+            "C++": "Fix the recursive SQL builder in comments.cpp",
+            "Java": "Fix the recursive JPA query in CommentDAO.java",
+            "C": "Fix the recursive query in comments.c"
+        }
+    },
+    {
+        "bugId": "BUG-601",
+        "name": "XSS in Search Input",
+        "description": "The search bar does not sanitize user input, allowing script injection via crafted search queries. Needs proper HTML escaping.",
+        "marketValue": 900,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "JavaScript": "Fix the input sanitization in search.js",
+            "Python": "Fix the template escaping in search.py",
+            "C++": "Fix the HTML encoder in search_handler.cpp",
+            "Java": "Fix the XSS filter in SearchServlet.java",
+            "C": "Fix the HTML escape in search.c"
+        }
+    },
+    {
+        "bugId": "BUG-702",
+        "name": "Integer Overflow in Calculator",
+        "description": "Large number multiplication causes integer overflow leading to incorrect financial calculations. Needs BigInt/safe arithmetic.",
+        "marketValue": 1100,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "JavaScript": "Fix the overflow in calculator.js using BigInt",
+            "Python": "Fix the precision in calculator.py",
+            "C++": "Fix the overflow in calculator.cpp",
+            "Java": "Fix using BigInteger in Calculator.java",
+            "C": "Fix the overflow check in calculator.c"
+        }
+    },
+    {
+        "bugId": "BUG-803",
+        "name": "Deadlock in Connection Pool",
+        "description": "Two threads acquiring connections in opposite order cause a deadlock under peak traffic. Pool exhaustion leads to full system freeze.",
+        "marketValue": 1800,
+        "difficulty": "Expert",
+        "tag": "💀",
+        "languageVersions": {
+            "JavaScript": "Fix the async pool manager in pool.js",
+            "Python": "Fix the connection pool in pool.py",
+            "C++": "Fix the lock ordering in ConnectionPool.cpp",
+            "Java": "Fix the ReentrantLock in ConnectionPool.java",
+            "C": "Fix the semaphore in connection_pool.c"
+        }
+    },
+    {
+        "bugId": "BUG-904",
+        "name": "Cache Invalidation Bug",
+        "description": "Stale cache entries persist after data updates, causing users to see outdated information. Cache TTL and invalidation logic is broken.",
+        "marketValue": 700,
+        "difficulty": "Easy",
+        "tag": "🟢",
+        "languageVersions": {
+            "JavaScript": "Fix the cache invalidation in cache.js",
+            "Python": "Fix the cache decorator in cache.py",
+            "C++": "Fix the cache map in CacheManager.cpp",
+            "Java": "Fix the @Cacheable in CacheService.java",
+            "C": "Fix the hash map cache in cache.c"
+        }
+    },
+    {
+        "bugId": "BUG-010",
+        "name": "CORS Misconfiguration",
+        "description": "Wildcard CORS headers allow any origin to access sensitive API endpoints. Needs proper origin whitelist implementation.",
+        "marketValue": 500,
+        "difficulty": "Easy",
+        "tag": "🟢",
+        "languageVersions": {
+            "JavaScript": "Fix the CORS middleware in server.js",
+            "Python": "Fix the CORS config in app.py",
+            "C++": "Fix the CORS headers in server.cpp",
+            "Java": "Fix the CorsFilter in WebConfig.java",
+            "C": "Fix the CORS headers in http_server.c"
+        }
+    }
+]

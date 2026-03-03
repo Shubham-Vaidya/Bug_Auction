@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const PurchaseSchema = new mongoose.Schema(
+const RoomPlayerSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -12,21 +12,28 @@ const PurchaseSchema = new mongoose.Schema(
             ref: "Room",
             required: true,
         },
-        bugId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Bug",
-            required: true,
-        },
-        purchasePrice: {
-            type: Number,
-            required: true,
-        },
         teamName: {
             type: String,
             required: true,
+        },
+        coins: {
+            type: Number,
+            required: true,
+            default: 5000,
+        },
+        bugsWon: {
+            type: Number,
+            default: 0,
+        },
+        status: {
+            type: String,
+            enum: ["online", "idle"],
+            default: "online",
         },
     },
     { timestamps: true }
 );
 
-export default mongoose.models.Purchase || mongoose.model("Purchase", PurchaseSchema);
+RoomPlayerSchema.index({ userId: 1, roomId: 1 }, { unique: true });
+
+export default mongoose.models.RoomPlayer || mongoose.model("RoomPlayer", RoomPlayerSchema);

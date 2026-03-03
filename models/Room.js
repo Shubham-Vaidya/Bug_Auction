@@ -7,23 +7,23 @@ const RoomSchema = new mongoose.Schema(
             required: true,
             unique: true,
         },
-        createdBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
+        roomName: {
+            type: String,
+            required: true,
+        },
+        coinsPerTeam: {
+            type: Number,
+            required: true,
+            default: 5000,
         },
         status: {
             type: String,
-            enum: ["WAITING", "LIVE", "LOCKED", "SOLVING", "ENDED"],
+            enum: ["WAITING", "LIVE", "ENDED"],
             default: "WAITING",
         },
-        teams: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
-        currentBug: {
-            type: String, // String to store the bug ID (e.g., 'BUG-404')
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
         },
     },
     { timestamps: true }

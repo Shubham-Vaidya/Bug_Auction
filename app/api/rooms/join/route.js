@@ -1,57 +1,71 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
-import User from "@/models/User";
+import RoomPlayer from "@/models/RoomPlayer";
+import User from "@/models/user";
 
-export async function POST(req) {
+export async function POST(request) {
     try {
         await dbConnect();
+        const { roomCode, userId } = await request.json();
 
-        let body;
-        try {
-            body = await req.json();
-        } catch (e) {
-            return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400 });
-        }
-
-        const { teamName, roomId, language } = body;
-
-        if (!teamName || !roomId) {
+        if (!roomCode || !userId) {
             return NextResponse.json(
-                { success: false, error: "Team name and room ID are required." },
+                { error: "Room code and user ID are required" },
                 { status: 400 }
             );
         }
 
-        // Find room
-        const room = await Room.findOne({ roomId });
+        const room = await Room.findOne({ roomId: roomCode.toUpperCase() });
         if (!room) {
             return NextResponse.json(
-                { success: false, error: "Room not found." },
+                { error: "Room not found" },
                 { status: 404 }
             );
         }
 
-        // Create user with role "team"
-        const newUser = await User.create({
-            teamName,
-            roomId,
-            language: language || "JavaScript",
-            role: "team"
+        if (room.status === "ENDED") {
+            return NextResponse.json(
+                { error: "Room has ended" },
+                { status: 400 }
+            );
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return NextResponse.json(
+                { error: "User not found" },
+                { status: 404 }
+            );
+        }
+
+        // Check if already joined
+        const existing = await RoomPlayer.findOne({ userId: user._id, roomId: room._id });
+        if (existing) {
+            return NextResponse.json({
+                success: true,
+                message: "Already joined",
+                roomPlayer: existing,
+            });
+        }
+
+        const roomPlayer = await RoomPlayer.create({
+            userId: user._id,
+            roomId: room._id,
+            teamName: user.teamName,
+            coins: room.coinsPerTeam,
+            bugsWon: 0,
+            status: "online",
         });
 
-        // Add user to room.teams
-        room.teams.push(newUser._id);
-        await room.save();
-
-        return NextResponse.json(
-            { success: true, message: "Successfully joined room", user: newUser },
-            { status: 201 }
-        );
+        return NextResponse.json({
+            success: true,
+            roomPlayer,
+        });
     } catch (error) {
-        console.error("Error joining room:", error);
+        console.error("Join room error:", error);
         return NextResponse.json(
-            { success: false, error: error.message },
+            { error: "Failed to join room" },
             { status: 500 }
         );
     }
