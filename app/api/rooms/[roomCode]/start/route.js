@@ -2,18 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
-import RoomPlayerPuzzle from "@/models/RoomPlayerPuzzle";
-import Puzzle from "@/models/Puzzle";
-
-// Fisher-Yates shuffle
-function shuffleArray(array) {
-    const arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
+import Bug from "@/models/Bug";
 
 export async function POST(request, { params }) {
     try {
@@ -22,7 +11,7 @@ export async function POST(request, { params }) {
         const { userId } = await request.json();
 
         // Get room
-        const room = await Room.findOne({ roomCode: roomCode.toUpperCase() });
+        const room = await Room.findOne({ roomId: roomCode.toUpperCase() });
         if (!room) {
             return NextResponse.json(
                 { error: "Room not found" },
@@ -38,9 +27,9 @@ export async function POST(request, { params }) {
             );
         }
 
-        if (room.status !== "waiting") {
+        if (room.status !== "WAITING") {
             return NextResponse.json(
-                { error: "Room is not in waiting state" },
+                { error: "Room is not in WAITING state" },
                 { status: 400 }
             );
         }
@@ -54,55 +43,21 @@ export async function POST(request, { params }) {
             );
         }
 
-        // Get all puzzles
-        const allPuzzles = await Puzzle.find({});
-        if (allPuzzles.length < room.puzzleCountPerTeam) {
-            return NextResponse.json(
-                { error: `Not enough puzzles. Need ${room.puzzleCountPerTeam}, have ${allPuzzles.length}` },
-                { status: 400 }
-            );
-        }
-
-        const puzzleIds = allPuzzles.map((p) => p._id);
-
-        // Assign random puzzles to each player
-        const puzzleAssignments = [];
-        for (const player of players) {
-            const shuffled = shuffleArray(puzzleIds);
-            const selected = shuffled.slice(0, room.puzzleCountPerTeam);
-
-            for (let i = 0; i < selected.length; i++) {
-                puzzleAssignments.push({
-                    userId: player.userId,
-                    roomId: room._id,
-                    puzzleId: selected[i],
-                    orderNumber: i + 1,
-                    status: "unsolved",
-                });
-            }
-        }
-
-        // Clear any existing puzzle assignments for this room (in case of restart)
-        await RoomPlayerPuzzle.deleteMany({ roomId: room._id });
-
-        // Create all puzzle assignments
-        await RoomPlayerPuzzle.insertMany(puzzleAssignments);
-
-        // Update player statuses
+        // Update player statuses (to match RoomPlayer model if needed, 
+        // though RoomPlayer model currently uses 'online'/'idle')
         await RoomPlayer.updateMany(
             { roomId: room._id },
-            { $set: { status: "playing" } }
+            { $set: { status: "online" } }
         );
 
         // Start the room
-        room.status = "active";
-        room.startTime = new Date();
+        room.status = "LIVE";
         await room.save();
 
         return NextResponse.json({
             success: true,
-            message: "Room started! Puzzles assigned to all teams.",
-            startTime: room.startTime,
+            message: "Room started! Auction is now LIVE.",
+            room: room,
         });
     } catch (error) {
         console.error("Start room error:", error);
@@ -112,3 +67,4 @@ export async function POST(request, { params }) {
         );
     }
 }
+
