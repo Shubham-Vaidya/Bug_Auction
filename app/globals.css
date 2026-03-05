@@ -145,17 +145,18 @@ h4,
 }
 
 .border-green {
-    border: 2px solid var(--neon-green);
+    /* stronger rule so card border stays neon-green instead of default white */
+    border: 2px solid var(--neon-green) !important;
     box-shadow: 0 0 60px var(--green-glow), 0 0 120px rgba(0, 255, 65, 0.2), inset 0 0 20px rgba(0, 255, 65, 0.15);
 }
 
 .border-purple {
-    border: 2px solid var(--neon-purple);
+    border: 2px solid var(--neon-purple) !important;
     box-shadow: 0 0 60px var(--purple-glow), 0 0 120px rgba(188, 19, 254, 0.2), inset 0 0 20px rgba(188, 19, 254, 0.15);
 }
 
 .border-blue {
-    border: 2px solid var(--neon-blue);
+    border: 2px solid var(--neon-blue) !important;
     box-shadow: 0 0 60px var(--blue-glow), 0 0 120px rgba(0, 210, 255, 0.2), inset 0 0 20px rgba(0, 210, 255, 0.15);
 }
 
@@ -277,8 +278,10 @@ h4,
 }
 
 .btn-green {
+    /* neon-green border with transparent background for classic "enter as admin" look */
     color: var(--neon-green);
     border-color: var(--neon-green);
+    background: transparent;
     box-shadow: 0 0 18px var(--green-glow), 0 0 4px rgba(0, 255, 65, 0.4), inset 0 0 12px rgba(0, 255, 65, 0.1);
 }
 
@@ -290,16 +293,18 @@ h4,
 }
 
 .btn-purple {
+    /* solid neon purple fill for team registration button */
     color: #ffffff !important;
     border-color: var(--neon-purple);
+    background: var(--neon-purple);
     box-shadow: 0 0 18px var(--purple-glow), 0 0 4px rgba(223, 22, 255, 0.4), inset 0 0 12px rgba(223, 22, 255, 0.1);
-    background: rgba(223, 22, 255, 0.1);
 }
 
 .btn-purple:hover {
+    /* maintain solid purple on hover, just increase glow */
     background: var(--neon-purple);
     color: #fff !important;
-    box-shadow: 0 0 40px var(--neon-purple), 0 0 80px rgba(188, 19, 254, 0.25), inset 0 0 20px rgba(223, 22, 255, 0.2);
+    box-shadow: 0 0 60px var(--neon-purple), 0 0 120px rgba(188, 19, 254, 0.3), inset 0 0 20px rgba(223, 22, 255, 0.2);
     transform: translateY(-3px) scale(1.02);
 }
 
