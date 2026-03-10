@@ -9,6 +9,7 @@ export default function LeaderboardPage({ params }) {
     const [teams, setTeams] = useState([]);
     const [room, setRoom] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [profitMap, setProfitMap] = useState({});
 
     useEffect(() => {
         const fetchData = async () => {
@@ -21,6 +22,12 @@ export default function LeaderboardPage({ params }) {
                 const teamsData = await teamsRes.json();
                 if (roomData.success) setRoom(roomData.room);
                 if (teamsData.success) setTeams(teamsData.teams);
+
+                // Fetch submission profit data
+                const profitRes = await fetch(`/api/submissions/leaderboard?roomCode=${roomCode}`);
+                const profitData = await profitRes.json();
+                if (profitData.success) setProfitMap(profitData.profitMap || {});
+
                 setLoading(false);
             } catch (err) {
                 console.error(err);
@@ -33,12 +40,21 @@ export default function LeaderboardPage({ params }) {
         return () => clearInterval(interval);
     }, [roomCode]);
 
+    const isEnded = room?.status === "ENDED";
+
+    // Sort by profit when ended, otherwise by bugsWon + coins
     const sorted = [...teams].sort((a, b) => {
+        if (isEnded) {
+            const profitA = profitMap[a.teamName]?.totalProfit ?? -Infinity;
+            const profitB = profitMap[b.teamName]?.totalProfit ?? -Infinity;
+            if (profitB !== profitA) return profitB - profitA;
+        }
         if (b.bugsWon !== a.bugsWon) return b.bugsWon - a.bugsWon;
         return b.coins - a.coins;
     });
 
     const totalSpent = teams.reduce((acc, t) => acc + (t.purchases?.reduce((s, p) => s + (p.price || 0), 0) || 0), 0);
+    const totalProfit = Object.values(profitMap).reduce((acc, v) => acc + (v.totalProfit || 0), 0);
 
     if (loading) {
         return (
@@ -62,7 +78,11 @@ export default function LeaderboardPage({ params }) {
                 <div style={{ textAlign: 'center', marginBottom: '48px' }}>
                     <h1 className="orbitron neon-green" style={{ fontSize: '2.4rem', marginBottom: '10px' }}>🏆 GLOBAL RANKINGS</h1>
                     <p className="text-sec" style={{ letterSpacing: '4px', fontSize: '0.78rem' }}>ROOM: {room?.roomId || roomCode}</p>
-
+                    {isEnded && (
+                        <p className="text-sec" style={{ fontSize: '0.72rem', marginTop: '6px', letterSpacing: '2px', color: 'var(--neon-purple)' }}>
+                            🏁 AUCTION ENDED · SORTED BY PROFIT
+                        </p>
+                    )}
                 </div>
 
                 <div className="card border-purple" style={{ padding: 0, overflow: 'hidden', marginBottom: '32px' }}>
@@ -74,12 +94,14 @@ export default function LeaderboardPage({ params }) {
                                 <th>Status</th>
                                 <th>Bugs Won</th>
                                 <th style={{ textAlign: 'right' }}>Remaining ₹</th>
+                                <th style={{ textAlign: 'right' }}>Total Profit</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sorted.map((t, i) => {
                                 const rank = i + 1;
                                 const rankClass = rank === 1 ? "neon-green" : rank === 2 ? "neon-purple" : rank === 3 ? "neon-amber" : "text-sec";
+                                const teamProfit = profitMap[t.teamName];
                                 return (
                                     <tr key={t._id}>
                                         <td className={`${rankClass} orbitron`} style={{ fontSize: '1.1rem' }}>#{rank}</td>
@@ -88,6 +110,15 @@ export default function LeaderboardPage({ params }) {
                                         <td><span className="orbitron neon-blue" style={{ fontSize: '1rem' }}>{t.bugsWon}</span></td>
                                         <td style={{ textAlign: 'right' }}>
                                             <span className="neon-green orbitron mono" style={{ fontSize: '0.9rem' }}>₹{t.coins?.toLocaleString()}</span>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            {teamProfit ? (
+                                                <span className={`orbitron mono ${teamProfit.totalProfit >= 0 ? 'neon-green' : 'neon-amber'}`} style={{ fontSize: '0.9rem' }}>
+                                                    {teamProfit.totalProfit >= 0 ? '+' : ''}₹{teamProfit.totalProfit?.toLocaleString()}
+                                                </span>
+                                            ) : (
+                                                <span className="text-sec" style={{ fontSize: '0.82rem' }}>—</span>
+                                            )}
                                         </td>
                                     </tr>
                                 );
@@ -113,6 +144,14 @@ export default function LeaderboardPage({ params }) {
                         <div className="stat-label">Total Revenue</div>
                         <div className="stat-value neon-amber">₹{totalSpent.toLocaleString()}</div>
                     </div>
+                    {isEnded && (
+                        <div className="card text-center">
+                            <div className="stat-label">Net Profit</div>
+                            <div className={`stat-value ${totalProfit >= 0 ? 'neon-green' : 'neon-amber'}`}>
+                                {totalProfit >= 0 ? '+' : ''}₹{totalProfit.toLocaleString()}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="btn-row btn-row-center mt-40">

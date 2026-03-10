@@ -12,6 +12,13 @@ export default function TeamPage({ params }) {
     const [allTeams, setAllTeams] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Submission state
+    const [submissions, setSubmissions] = useState({}); // { bugId: submissionObj }
+    const [submitModal, setSubmitModal] = useState(null); // { bugId, bugName, purchasePrice }
+    const [solutionCode, setSolutionCode] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [submitMsg, setSubmitMsg] = useState("");
+
     useEffect(() => {
         const userData = localStorage.getItem("user");
         if (!userData) { router.push("/signup"); return; }
@@ -48,6 +55,68 @@ export default function TeamPage({ params }) {
         return () => clearInterval(interval);
     }, [user, roomCode]);
 
+    // Fetch team submissions when room is ENDED
+    useEffect(() => {
+        if (!user || !room || room.status !== "ENDED") return;
+
+        const fetchSubmissions = async () => {
+            try {
+                const res = await fetch(`/api/submissions/team?userId=${user._id}&roomCode=${roomCode}`);
+                const data = await res.json();
+                if (data.success) {
+                    const map = {};
+                    data.submissions.forEach((s) => {
+                        // Key by the bug's string bugId (e.g. "BUG-001")
+                        map[s.bugId?.bugId || s.bugTitle] = s;
+                    });
+                    setSubmissions(map);
+                }
+            } catch (err) {
+                console.error("Failed to fetch submissions", err);
+            }
+        };
+
+        fetchSubmissions();
+        const interval = setInterval(fetchSubmissions, 5000);
+        return () => clearInterval(interval);
+    }, [user, room, roomCode]);
+
+    const handleSubmit = async () => {
+        if (!solutionCode.trim() || !submitModal) return;
+        setSubmitting(true);
+        setSubmitMsg("");
+        try {
+            const res = await fetch("/api/submissions/submit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: user._id,
+                    roomCode,
+                    bugStringId: submitModal.bugStringId,
+                    solutionCode,
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setSubmitMsg("✅ Solution submitted successfully!");
+                // Refresh submissions
+                const r = await fetch(`/api/submissions/team?userId=${user._id}&roomCode=${roomCode}`);
+                const d = await r.json();
+                if (d.success) {
+                    const map = {};
+                    d.submissions.forEach((s) => { map[s.bugId?.bugId || s.bugTitle] = s; });
+                    setSubmissions(map);
+                }
+                setTimeout(() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }, 1500);
+            } else {
+                setSubmitMsg(`❌ ${data.error}`);
+            }
+        } catch (err) {
+            setSubmitMsg("❌ Failed to submit. Try again.");
+        }
+        setSubmitting(false);
+    };
+
     if (loading) {
         return (
             <div className="screen-center">
@@ -60,6 +129,8 @@ export default function TeamPage({ params }) {
         if (b.bugsWon !== a.bugsWon) return b.bugsWon - a.bugsWon;
         return b.coins - a.coins;
     });
+
+    const isEnded = room?.status === "ENDED";
 
     return (
         <>
@@ -131,7 +202,7 @@ export default function TeamPage({ params }) {
                                 <div className="text-center" style={{ padding: '32px 20px' }}>
                                     <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>🔍</div>
                                     <div className="text-sec" style={{ fontSize: '0.85rem' }}>
-                                        Waiting for admin to reveal a bug...
+                                        {isEnded ? "Auction has ended." : "Waiting for admin to reveal a bug..."}
                                     </div>
                                 </div>
                             )}
@@ -150,6 +221,9 @@ export default function TeamPage({ params }) {
                             ) : (
                                 myData.purchases?.map((p, i) => {
                                     const diffColor = p.difficulty === "Expert" ? "neon-purple" : p.difficulty === "Hard" ? "neon-amber" : p.difficulty === "Medium" ? "neon-blue" : "neon-green";
+                                    // Find submission by matching bugId string (e.g. "BUG-001")
+                                    const submissionEntry = submissions[p.bugId];
+
                                     return (
                                         <div key={i} className="bug-card" style={{ marginBottom: '16px' }}>
                                             <div className="bug-card-id">{p.bugId} {p.tag}</div>
@@ -164,6 +238,54 @@ export default function TeamPage({ params }) {
                                                     <span className={`bug-meta-value ${diffColor}`}>{p.difficulty}</span>
                                                 </div>
                                             </div>
+
+                                            {/* Submission Status + Score/Profit */}
+                                            {isEnded && (
+                                                <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                                                    {!submissionEntry ? (
+                                                        <button
+                                                            className="btn btn-blue btn-sm"
+                                                            style={{ width: '100%' }}
+                                                            onClick={() => {
+                                                                setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
+                                                                setSolutionCode("");
+                                                                setSubmitMsg("");
+                                                            }}
+                                                        >
+                                                            📤 SUBMIT SOLUTION
+                                                        </button>
+                                                    ) : submissionEntry.status === "pending" ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                            <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>⏳ SUBMITTED — AWAITING SCORE</span>
+                                                            <button
+                                                                className="btn btn-blue btn-sm"
+                                                                onClick={() => {
+                                                                    setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
+                                                                    setSolutionCode(submissionEntry.solutionCode || "");
+                                                                    setSubmitMsg("");
+                                                                }}
+                                                                style={{ fontSize: '0.65rem', padding: '4px 10px' }}
+                                                            >
+                                                                ✏️ Edit
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                <span className="bug-meta-label">Admin Score</span>
+                                                                <span className="bug-meta-value neon-purple">{submissionEntry.adminScore} pts</span>
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                <span className="bug-meta-label">Profit</span>
+                                                                <span className={`bug-meta-value ${submissionEntry.profit >= 0 ? 'neon-green' : 'neon-amber'}`}>
+                                                                    {submissionEntry.profit >= 0 ? '+' : ''}₹{submissionEntry.profit?.toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                            <span className="badge badge-green" style={{ fontSize: '0.62rem', alignSelf: 'flex-start' }}>✅ SCORED</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })
@@ -219,12 +341,72 @@ export default function TeamPage({ params }) {
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>ROOM</span>
                                         <span className="mono neon-amber" style={{ fontSize: '0.82rem' }}>{room?.roomId || roomCode}</span>
                                     </div>
+                                    {/* Profit summary */}
+                                    {isEnded && Object.values(submissions).some(s => s.status === "scored") && (
+                                        <>
+                                            <div className="stats-row-item">
+                                                <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>TOTAL PROFIT</span>
+                                                <span className="orbitron neon-green">
+                                                    ₹{Object.values(submissions).filter(s => s.status === "scored").reduce((acc, s) => acc + (s.profit || 0), 0).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Submit Solution Modal */}
+            {submitModal && (
+                <div className="modal-overlay active">
+                    <div className="modal-box" style={{ maxWidth: '560px', width: '90%' }}>
+                        <h3 className="orbitron neon-blue" style={{ marginBottom: '8px' }}>📤 SUBMIT SOLUTION</h3>
+                        <div className="text-xs text-sec" style={{ marginBottom: '20px' }}>
+                            {submitModal.bugId} — {submitModal.bugName} · Paid: ₹{submitModal.purchasePrice?.toLocaleString()}
+                        </div>
+
+                        <div className="input-group">
+                            <label className="input-label">Your Solution Code</label>
+                            <textarea
+                                className="input"
+                                rows={10}
+                                placeholder="Paste your solution code here..."
+                                value={solutionCode}
+                                onChange={(e) => setSolutionCode(e.target.value)}
+                                style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '0.82rem',
+                                    resize: 'vertical',
+                                    minHeight: '180px',
+                                    lineHeight: '1.5',
+                                }}
+                            />
+                        </div>
+
+                        {submitMsg && (
+                            <div style={{ fontSize: '0.82rem', marginBottom: '12px', color: submitMsg.startsWith('✅') ? 'var(--neon-green)' : 'var(--neon-amber)' }}>
+                                {submitMsg}
+                            </div>
+                        )}
+
+                        <div className="btn-row mt-24">
+                            <button
+                                className="btn btn-green flex-1"
+                                onClick={handleSubmit}
+                                disabled={submitting || !solutionCode.trim()}
+                            >
+                                {submitting ? "SUBMITTING..." : "CONFIRM SUBMIT"}
+                            </button>
+                            <button className="btn btn-purple flex-1" onClick={() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }}>
+                                CANCEL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

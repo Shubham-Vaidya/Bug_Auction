@@ -25,6 +25,12 @@ export default function AdminDashboard() {
     const [allotPrice, setAllotPrice] = useState(0);
     const [allotTeamId, setAllotTeamId] = useState("");
 
+    // Submissions tab
+    const [centerTab, setCenterTab] = useState("auction"); // "auction" | "submissions"
+    const [submissions, setSubmissions] = useState([]);
+    const [scoreInputs, setScoreInputs] = useState({}); // { submissionId: scoreValue }
+    const [expandedCode, setExpandedCode] = useState(null); // submissionId with code visible
+
     useEffect(() => {
         const userData = localStorage.getItem("user");
         if (!userData) { router.push("/admin/login"); return; }
@@ -68,13 +74,24 @@ export default function AdminDashboard() {
         } catch (err) { console.error(err); }
     }, []);
 
+    // Fetch submissions
+    const fetchSubmissions = useCallback(async () => {
+        if (!selectedRoom || !user) return;
+        try {
+            const res = await fetch(`/api/submissions/admin?roomCode=${selectedRoom.roomId}&adminId=${user._id}`);
+            const data = await res.json();
+            if (data.success) setSubmissions(data.submissions);
+        } catch (err) { console.error(err); }
+    }, [selectedRoom, user]);
+
     useEffect(() => { fetchRooms(); fetchBugs(); }, [fetchRooms, fetchBugs]);
     useEffect(() => {
         if (!selectedRoom) return;
         fetchTeams();
-        const interval = setInterval(fetchTeams, 3000);
+        fetchSubmissions();
+        const interval = setInterval(() => { fetchTeams(); fetchSubmissions(); }, 3000);
         return () => clearInterval(interval);
-    }, [selectedRoom, fetchTeams]);
+    }, [selectedRoom, fetchTeams, fetchSubmissions]);
 
     const handleCreateRoom = async () => {
         if (!roomName.trim()) return;
@@ -165,6 +182,26 @@ export default function AdminDashboard() {
                 addFeed(data.error, "amber");
             }
         } catch (err) { addFeed("Failed to update status", "amber"); }
+    };
+
+    const handleScoreSubmit = async (submissionId) => {
+        const score = scoreInputs[submissionId];
+        if (score === undefined || score === "") return;
+        try {
+            const res = await fetch("/api/submissions/score", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ submissionId, adminScore: Number(score), adminId: user._id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                addFeed(data.message, "green");
+                setScoreInputs((prev) => { const n = { ...prev }; delete n[submissionId]; return n; });
+                fetchSubmissions();
+            } else {
+                addFeed(data.error, "amber");
+            }
+        } catch (err) { addFeed("Failed to score submission", "amber"); }
     };
 
     const PHASE_STYLE = {
@@ -286,69 +323,202 @@ export default function AdminDashboard() {
                         )}
                     </div>
 
-                    {/* CENTER PANEL: Bug List + Allot */}
+                    {/* CENTER PANEL: Bug List + Allot / Submissions */}
                     <div className="panel">
                         <div className="card">
-                            <div className="panel-title">Auction Control</div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <h3 className="orbitron" style={{ fontSize: '0.95rem' }}>BUG MARKETPLACE</h3>
-                                <button className="btn btn-blue btn-sm" onClick={handleSeedBugs}>🐛 SEED BUGS</button>
+                            {/* Tab Header */}
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
+                                <button
+                                    className={`btn btn-sm ${centerTab === 'auction' ? 'btn-blue' : ''}`}
+                                    style={centerTab !== 'auction' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    onClick={() => setCenterTab("auction")}
+                                >
+                                    🎯 Auction Control
+                                </button>
+                                <button
+                                    className={`btn btn-sm ${centerTab === 'submissions' ? 'btn-purple' : ''}`}
+                                    style={centerTab !== 'submissions' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    onClick={() => setCenterTab("submissions")}
+                                >
+                                    📋 Submissions {submissions.length > 0 && <span className="badge badge-green" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{submissions.length}</span>}
+                                </button>
                             </div>
 
-                            {/* Auction Phase Controls */}
-                            <div style={{ marginBottom: '16px' }}>
-                                <div className="panel-title mb-12">Auction Phase</div>
-                                <div className="btn-row">
-                                    <button className="btn btn-green btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("LIVE")} disabled={auctionPhase === "LIVE"}>▶ START</button>
-                                    <button className="btn btn-amber btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("PAUSED")} disabled={auctionPhase !== "LIVE"}>⏸ PAUSE</button>
-                                    <button className="btn btn-blue btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("ENDED")} disabled={auctionPhase === "ENDED"}>🏁 END</button>
-                                </div>
-                            </div>
+                            {centerTab === "auction" ? (
+                                <>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                        <h3 className="orbitron" style={{ fontSize: '0.95rem' }}>BUG MARKETPLACE</h3>
+                                        <button className="btn btn-blue btn-sm" onClick={handleSeedBugs}>🐛 SEED BUGS</button>
+                                    </div>
 
-                            <div className="section-divider"></div>
-
-                            {/* Bug Cards */}
-                            {bugs.length === 0 ? (
-                                <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>
-                                    No bugs loaded. Click &quot;SEED BUGS&quot; to load the bug pool.
-                                </div>
-                            ) : (
-                                bugs.map((bug) => {
-                                    const diffColor = bug.difficulty === "Expert" ? "neon-purple" : bug.difficulty === "Hard" ? "neon-amber" : bug.difficulty === "Medium" ? "neon-blue" : "neon-green";
-                                    return (
-                                        <div key={bug._id} className="bug-card" style={{ marginBottom: '16px' }}>
-                                            <div className="bug-card-id">BUG ID: {bug.bugId} &nbsp; {bug.tag}</div>
-                                            <div className="bug-card-name">{bug.name}</div>
-                                            <div className="text-xs text-sec mb-12">{bug.description}</div>
-                                            <div className="bug-card-meta">
-                                                <div className="bug-meta-item">
-                                                    <span className="bug-meta-label">Market Value</span>
-                                                    <span className={`bug-meta-value neon-green`}>₹{bug.marketValue?.toLocaleString()}</span>
-                                                </div>
-                                                <div className="bug-meta-item">
-                                                    <span className="bug-meta-label">Difficulty</span>
-                                                    <span className={`bug-meta-value ${diffColor}`}>{bug.difficulty}</span>
-                                                </div>
-                                                <div className="bug-meta-item" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                                    {selectedRoom && (
-                                                        <button
-                                                            className="btn btn-blue btn-sm"
-                                                            onClick={() => handleShowBug(bug)}
-                                                            style={activeBugId === bug._id ? { background: 'var(--neon-blue)', color: '#000' } : {}}
-                                                        >
-                                                            {activeBugId === bug._id ? '🔴 LIVE' : '👁 SHOW'}
-                                                        </button>
-                                                    )}
-                                                    {selectedRoom && teams.length > 0 && (
-                                                        <button className="btn btn-purple btn-sm" onClick={() => { setAllotModal(bug); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
-                                                            🎯 ALLOT
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
+                                    {/* Auction Phase Controls */}
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div className="panel-title mb-12">Auction Phase</div>
+                                        <div className="btn-row">
+                                            <button className="btn btn-green btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("LIVE")} disabled={auctionPhase === "LIVE"}>▶ START</button>
+                                            <button className="btn btn-amber btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("PAUSED")} disabled={auctionPhase !== "LIVE"}>⏸ PAUSE</button>
+                                            <button className="btn btn-blue btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("ENDED")} disabled={auctionPhase === "ENDED"}>🏁 END</button>
                                         </div>
-                                    );
-                                })
+                                    </div>
+
+                                    <div className="section-divider"></div>
+
+                                    {/* Bug Cards */}
+                                    {bugs.length === 0 ? (
+                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>
+                                            No bugs loaded. Click &quot;SEED BUGS&quot; to load the bug pool.
+                                        </div>
+                                    ) : (
+                                        bugs.map((bug) => {
+                                            const diffColor = bug.difficulty === "Expert" ? "neon-purple" : bug.difficulty === "Hard" ? "neon-amber" : bug.difficulty === "Medium" ? "neon-blue" : "neon-green";
+                                            return (
+                                                <div key={bug._id} className="bug-card" style={{ marginBottom: '16px' }}>
+                                                    <div className="bug-card-id">BUG ID: {bug.bugId} &nbsp; {bug.tag}</div>
+                                                    <div className="bug-card-name">{bug.name}</div>
+                                                    <div className="text-xs text-sec mb-12">{bug.description}</div>
+                                                    <div className="bug-card-meta">
+                                                        <div className="bug-meta-item">
+                                                            <span className="bug-meta-label">Market Value</span>
+                                                            <span className={`bug-meta-value neon-green`}>₹{bug.marketValue?.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="bug-meta-item">
+                                                            <span className="bug-meta-label">Difficulty</span>
+                                                            <span className={`bug-meta-value ${diffColor}`}>{bug.difficulty}</span>
+                                                        </div>
+                                                        <div className="bug-meta-item" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                            {selectedRoom && (
+                                                                <button
+                                                                    className="btn btn-blue btn-sm"
+                                                                    onClick={() => handleShowBug(bug)}
+                                                                    style={activeBugId === bug._id ? { background: 'var(--neon-blue)', color: '#000' } : {}}
+                                                                >
+                                                                    {activeBugId === bug._id ? '🔴 LIVE' : '👁 SHOW'}
+                                                                </button>
+                                                            )}
+                                                            {selectedRoom && teams.length > 0 && (
+                                                                <button className="btn btn-purple btn-sm" onClick={() => { setAllotModal(bug); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
+                                                                    🎯 ALLOT
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </>
+                            ) : (
+                                /* Submissions Tab */
+                                <>
+                                    <h3 className="orbitron mb-20" style={{ fontSize: '0.95rem' }}>TEAM SUBMISSIONS</h3>
+                                    {!selectedRoom ? (
+                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>Select a room first.</div>
+                                    ) : submissions.length === 0 ? (
+                                        <div className="text-center" style={{ padding: '32px 16px' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📭</div>
+                                            <div className="text-sec" style={{ fontSize: '0.85rem' }}>No submissions yet.</div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                                <thead>
+                                                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                                        <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>TEAM</th>
+                                                        <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>BUG</th>
+                                                        <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>PAID</th>
+                                                        <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>CODE</th>
+                                                        <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>SCORE</th>
+                                                        <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>PROFIT</th>
+                                                        <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>ACTION</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {submissions.map((sub) => (
+                                                        <>
+                                                            <tr key={sub._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{sub.teamName}</td>
+                                                                <td style={{ padding: '10px 8px' }}>
+                                                                    <div className="text-xs" style={{ fontWeight: 600 }}>{sub.bugTitle}</div>
+                                                                    <div className="text-xs text-sec">{sub.bugId?.bugId}</div>
+                                                                </td>
+                                                                <td style={{ padding: '10px 8px', textAlign: 'right' }} className="neon-green">₹{sub.purchasePrice?.toLocaleString()}</td>
+                                                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                    <button
+                                                                        className="btn btn-sm"
+                                                                        style={{ fontSize: '0.65rem', padding: '4px 10px', background: expandedCode === sub._id ? 'rgba(0,242,255,0.15)' : 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' }}
+                                                                        onClick={() => setExpandedCode(expandedCode === sub._id ? null : sub._id)}
+                                                                    >
+                                                                        {expandedCode === sub._id ? '🔼 Hide' : '👁 View'}
+                                                                    </button>
+                                                                </td>
+                                                                <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                                                    {sub.status === "scored" ? (
+                                                                        <span className="neon-purple">{sub.adminScore} pts</span>
+                                                                    ) : (
+                                                                        <input
+                                                                            type="number"
+                                                                            className="input"
+                                                                            style={{ width: '80px', padding: '5px 8px', fontSize: '0.78rem', textAlign: 'right' }}
+                                                                            placeholder="0"
+                                                                            value={scoreInputs[sub._id] ?? ""}
+                                                                            onChange={(e) => setScoreInputs((prev) => ({ ...prev, [sub._id]: e.target.value }))}
+                                                                        />
+                                                                    )}
+                                                                </td>
+                                                                <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                                                    {sub.status === "scored" ? (
+                                                                        <span className={sub.profit >= 0 ? 'neon-green' : 'neon-amber'}>
+                                                                            {sub.profit >= 0 ? '+' : ''}₹{sub.profit?.toLocaleString()}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-sec">—</span>
+                                                                    )}
+                                                                </td>
+                                                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                    {sub.status === "scored" ? (
+                                                                        <span className="badge badge-green" style={{ fontSize: '0.6rem' }}>✅ SCORED</span>
+                                                                    ) : (
+                                                                        <button
+                                                                            className="btn btn-green btn-sm"
+                                                                            style={{ fontSize: '0.65rem', padding: '5px 12px' }}
+                                                                            onClick={() => handleScoreSubmit(sub._id)}
+                                                                            disabled={!scoreInputs[sub._id]}
+                                                                        >
+                                                                            SAVE
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                            {/* Expanded code row */}
+                                                            {expandedCode === sub._id && (
+                                                                <tr key={`code-${sub._id}`}>
+                                                                    <td colSpan={7} style={{ padding: '0 8px 12px 8px' }}>
+                                                                        <pre style={{
+                                                                            background: 'rgba(0,0,0,0.4)',
+                                                                            border: '1px solid rgba(0,242,255,0.2)',
+                                                                            borderRadius: '6px',
+                                                                            padding: '14px',
+                                                                            fontSize: '0.75rem',
+                                                                            fontFamily: 'monospace',
+                                                                            whiteSpace: 'pre-wrap',
+                                                                            wordBreak: 'break-all',
+                                                                            color: 'var(--neon-green)',
+                                                                            maxHeight: '220px',
+                                                                            overflowY: 'auto',
+                                                                            lineHeight: '1.5',
+                                                                        }}>
+                                                                            {sub.solutionCode || "No code submitted."}
+                                                                        </pre>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -387,6 +557,10 @@ export default function AdminDashboard() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                                     <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>BUGS</span>
                                     <span className="orbitron neon-blue">{bugs.length}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>SUBMISSIONS</span>
+                                    <span className="orbitron neon-amber">{submissions.length}</span>
                                 </div>
                             </div>
                         </div>
