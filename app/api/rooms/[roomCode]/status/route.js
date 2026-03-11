@@ -26,6 +26,7 @@ export async function GET(request, { params }) {
                 status: room.status,
                 createdAt: room.createdAt,
                 activeBug: room.activeBug || null,
+                rebiddingStatus: room.rebiddingStatus || "INACTIVE",
             },
         });
     } catch (error) {

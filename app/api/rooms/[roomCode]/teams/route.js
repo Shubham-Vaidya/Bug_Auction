@@ -23,7 +23,7 @@ export async function GET(request, { params }) {
         const teams = await Promise.all(
             players.map(async (p) => {
                 const purchases = await Purchase.find({ userId: p.userId?._id, roomId: room._id })
-                    .populate("bugId", "bugId name marketValue difficulty tag")
+                    .populate("bugId", "bugId name description marketValue difficulty tag")
                     .lean();
                 return {
                     _id: p._id,
@@ -36,6 +36,7 @@ export async function GET(request, { params }) {
                     purchases: purchases.map((pr) => ({
                         bugId: pr.bugId?.bugId,
                         bugName: pr.bugId?.name,
+                        description: pr.bugId?.description,
                         price: pr.purchasePrice,
                         difficulty: pr.bugId?.difficulty,
                         tag: pr.bugId?.tag,

@@ -4,6 +4,7 @@ import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
 import Bug from "@/models/Bug";
 import Purchase from "@/models/Purchase";
+import Rebid from "@/models/Rebid";
 
 export async function POST(request, { params }) {
     try {
@@ -27,8 +28,8 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: "Team not found" }, { status: 404 });
         }
 
-        // Get the bug
-        const bug = await Bug.findById(bugId);
+        // Get the bug by string ID
+        const bug = await Bug.findOne({ bugId });
         if (!bug) {
             return NextResponse.json({ error: "Bug not found" }, { status: 404 });
         }
@@ -61,6 +62,12 @@ export async function POST(request, { params }) {
             purchasePrice: allotPrice,
             teamName: player.teamName,
         });
+
+        // If it was a rebid bug, mark it as SOLD
+        await Rebid.findOneAndUpdate(
+            { bugId: bug._id, roomId: room._id, status: { $ne: "SOLD" } },
+            { status: "SOLD" }
+        );
 
         return NextResponse.json({
             success: true,

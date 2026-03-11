@@ -9,7 +9,7 @@ export async function POST() {
         await dbConnect();
 
         const existingCount = await Bug.countDocuments();
-        if (existingCount >= 10) {
+        if (existingCount >= 15) {
             return NextResponse.json({
                 success: true,
                 message: `Bugs already seeded (${existingCount} found)`,
@@ -17,7 +17,8 @@ export async function POST() {
             });
         }
 
-        // Read bug data from JSON file
+        // Clear existing
+        await Bug.deleteMany({});
         const filePath = join(process.cwd(), "data", "bugData.json");
         const rawData = readFileSync(filePath, "utf-8");
         const bugData = JSON.parse(rawData);

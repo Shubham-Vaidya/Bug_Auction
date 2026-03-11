@@ -2,7 +2,7 @@
     {
         "bugId": "BUG-101",
         "name": "Auth Bypass Exploit",
-        "description": "A critical authentication bypass vulnerability that allows unauthorized access to admin endpoints. Requires deep understanding of JWT token validation.",
+        "description": "PREVIEW: A critical authentication bypass vulnerability that allows unauthorized access to admin endpoints. Can you identify the token validation flaw?\nFULL: The auth.js middleware fails to verify the 'exp' (expiration) claim on incoming JWTs, allowing expired tokens to be reused indefinitely for admin access.",
         "marketValue": 2000,
         "difficulty": "Expert",
         "tag": "💀",
@@ -17,7 +17,7 @@
     {
         "bugId": "BUG-202",
         "name": "Race Condition in Scheduler",
-        "description": "A race condition in the task scheduler causes duplicate job execution under high concurrency. Must implement proper mutex locking.",
+        "description": "PREVIEW: A race condition in the task scheduler causes duplicate job execution under high concurrency. Locate the missing mutex.\nFULL: The task scheduling loop concurrently reads and writes the 'active_task' counter without a global lock, leading to multiple threads picking up the same job ID during high-load bursts.",
         "marketValue": 1500,
         "difficulty": "Hard",
         "tag": "🔴",
@@ -32,7 +32,7 @@
     {
         "bugId": "BUG-303",
         "name": "Null Pointer Dereference",
-        "description": "Accessing an uninitialized pointer in the data processing pipeline causes segmentation faults under certain input patterns.",
+        "description": "PREVIEW: Accessing an uninitialized pointer in the data processing pipeline causes segmentation faults. Find the missing null check.\nFULL: The processing function in storage.c assumes the database handle is always connected, dereferencing 'db_ptr' even when a connection failure has occurred, leading to a SIGSEGV.",
         "marketValue": 600,
         "difficulty": "Easy",
         "tag": "🟢",
@@ -47,7 +47,7 @@
     {
         "bugId": "BUG-404",
         "name": "Memory Leak in Galaxy Filter",
-        "description": "The galaxy filter module leaks memory on each render cycle due to unreleased texture buffers. Leads to eventual OOM crash.",
+        "description": "PREVIEW: The galaxy filter module leaks memory on each render cycle due to unreleased texture buffers. Identify the resource leak.\nFULL: The WebGL context in galaxyFilter.js allocates a new buffer for every frame without calling gl.deleteBuffer(), eventually exhausting GPU memory and causing an Out-of-Memory crash.",
         "marketValue": 1200,
         "difficulty": "Hard",
         "tag": "🔴",
@@ -62,7 +62,7 @@
     {
         "bugId": "BUG-500",
         "name": "Database Recursive Loop",
-        "description": "A self-referencing foreign key creates an infinite recursive query loop when fetching nested comments. Needs query depth limiting.",
+        "description": "PREVIEW: A self-referencing foreign key creates an infinite recursive query loop when fetching nested comments. Find the loop condition.\nFULL: The GET /comments endpoint lacks a recursion depth limit for the parent_id self-join, causing the application to hang when processing circular comment references.",
         "marketValue": 800,
         "difficulty": "Medium",
         "tag": "🟡",
@@ -77,7 +77,7 @@
     {
         "bugId": "BUG-601",
         "name": "XSS in Search Input",
-        "description": "The search bar does not sanitize user input, allowing script injection via crafted search queries. Needs proper HTML escaping.",
+        "description": "PREVIEW: The search bar does not sanitize user input, allowing script injection via crafted search queries. Find the reflected sink.\nFULL: Search queries are directly injected into the DOM via innerHTML in search_results.js without escaping, allowing reflected XSS attacks like ?q=<script>alert(1)</script>.",
         "marketValue": 900,
         "difficulty": "Medium",
         "tag": "🟡",
@@ -92,7 +92,7 @@
     {
         "bugId": "BUG-702",
         "name": "Integer Overflow in Calculator",
-        "description": "Large number multiplication causes integer overflow leading to incorrect financial calculations. Needs BigInt/safe arithmetic.",
+        "description": "PREVIEW: Large number multiplication causes integer overflow leading to incorrect financial calculations. Find the arithmetic error.\nFULL: The billing calculation uses a standard 32-bit signed integer for total_cents, which overflows when calculating invoices over ₹21 million, resulting in negative invoice amounts.",
         "marketValue": 1100,
         "difficulty": "Medium",
         "tag": "🟡",
@@ -107,7 +107,7 @@
     {
         "bugId": "BUG-803",
         "name": "Deadlock in Connection Pool",
-        "description": "Two threads acquiring connections in opposite order cause a deadlock under peak traffic. Pool exhaustion leads to full system freeze.",
+        "description": "PREVIEW: Two threads acquiring connections in opposite order cause a deadlock under peak traffic. Locate the locking conflict.\nFULL: The DataLogger and UserSync classes acquire DB locks in reverse alphabetical order, causing a deadlock whenever both processes attempt to run simultaneously during a sync cycle.",
         "marketValue": 1800,
         "difficulty": "Expert",
         "tag": "💀",
@@ -122,7 +122,7 @@
     {
         "bugId": "BUG-904",
         "name": "Cache Invalidation Bug",
-        "description": "Stale cache entries persist after data updates, causing users to see outdated information. Cache TTL and invalidation logic is broken.",
+        "description": "PREVIEW: Stale cache entries persist after data updates, causing users to see outdated information. Find the broken TTL logic.\nFULL: The Redis cache invalidation logic fails to delete keys when a partial UPDATE occurs in the database, relying on a fixed 24-hour expiration that is too long for volatile user data.",
         "marketValue": 700,
         "difficulty": "Easy",
         "tag": "🟢",
@@ -137,7 +137,7 @@
     {
         "bugId": "BUG-010",
         "name": "CORS Misconfiguration",
-        "description": "Wildcard CORS headers allow any origin to access sensitive API endpoints. Needs proper origin whitelist implementation.",
+        "description": "PREVIEW: Wildcard CORS headers allow unauthorized origins. Can you fix the white-list logic?\nFULL: The system currently uses 'Access-Control-Allow-Origin: *' which is highly insecure for authenticated endpoints. You must replace this with a proper domain whitelist check in the middleware layer.",
         "marketValue": 500,
         "difficulty": "Easy",
         "tag": "🟢",
@@ -147,6 +147,17 @@
             "C++": "Fix the CORS headers in server.cpp",
             "Java": "Fix the CorsFilter in WebConfig.java",
             "C": "Fix the CORS headers in http_server.c"
+        }
+    },
+    {
+        "bugId": "BUG-999",
+        "name": "Average Calculation Logic",
+        "description": "PREVIEW: A Python program that calculates the average of numbers contains logical bugs. Can you identify and fix them?\nFULL: def calculate_average(numbers):\n    total = 0\n    for i in range(len(numbers)):\n        total += numbers[i]\n\n    average = total / (len(numbers) - 1)\n    return average\n\n\nnums = [10, 20, 30, 40]\nprint(\"Average:\", calculate_average(nums))",
+        "marketValue": 1000,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "Fix the division error and loop bounds."
         }
     }
 ]

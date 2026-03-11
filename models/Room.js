@@ -30,6 +30,11 @@ const RoomSchema = new mongoose.Schema(
             ref: "Bug",
             default: null,
         },
+        rebiddingStatus: {
+            type: String,
+            enum: ["INACTIVE", "ACCEPTING", "AUCTION"],
+            default: "INACTIVE",
+        },
     },
     { timestamps: true }
 );

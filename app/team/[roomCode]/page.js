@@ -2,6 +2,8 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import CodeEditor from "@/components/CodeEditor";
+import BugDetailsModal from "@/components/BugDetailsModal";
 
 export default function TeamPage({ params }) {
     const { roomCode } = use(params);
@@ -16,8 +18,10 @@ export default function TeamPage({ params }) {
     const [submissions, setSubmissions] = useState({}); // { bugId: submissionObj }
     const [submitModal, setSubmitModal] = useState(null); // { bugId, bugName, purchasePrice }
     const [solutionCode, setSolutionCode] = useState("");
+    const [selectedLanguage, setSelectedLanguage] = useState("javascript");
     const [submitting, setSubmitting] = useState(false);
     const [submitMsg, setSubmitMsg] = useState("");
+    const [viewingBug, setViewingBug] = useState(null);
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -94,6 +98,7 @@ export default function TeamPage({ params }) {
                     roomCode,
                     bugStringId: submitModal.bugStringId,
                     solutionCode,
+                    language: selectedLanguage,
                 }),
             });
             const data = await res.json();
@@ -115,6 +120,27 @@ export default function TeamPage({ params }) {
             setSubmitMsg("❌ Failed to submit. Try again.");
         }
         setSubmitting(false);
+    };
+
+    const handleSellForRebid = async (bugId, purchasePrice) => {
+        if (!confirm(`Are you sure you want to sell ${bugId} for a refund of ₹${purchasePrice.toLocaleString()}?`)) return;
+        try {
+            const res = await fetch("/api/rebid/sell", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user._id, roomCode, bugId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                // The interval fetch will update the UI
+            } else {
+                alert(data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to sell bug.");
+        }
     };
 
     if (loading) {
@@ -178,14 +204,20 @@ export default function TeamPage({ params }) {
                             <div className="panel-title underline-blue">Live Auction</div>
                             <h3 className="orbitron mb-20 neon-blue" style={{ fontSize: '1rem' }}>LIVE BUG</h3>
 
-                            {room?.activeBug ? (() => {
+                            {(room?.activeBug && (room.status === "LIVE" || room.rebiddingStatus === "AUCTION")) ? (() => {
                                 const ab = room.activeBug;
                                 const diffColor = ab.difficulty === "Expert" ? "neon-purple" : ab.difficulty === "Hard" ? "neon-amber" : ab.difficulty === "Medium" ? "neon-blue" : "neon-green";
                                 return (
-                                    <div className="bug-card" style={{ marginBottom: 0, border: '1px solid rgba(0,242,255,0.35)', background: 'rgba(0,242,255,0.04)' }}>
+                                    <div
+                                        className="bug-card"
+                                        style={{ marginBottom: 0, border: '1px solid rgba(0,242,255,0.35)', background: 'rgba(0,242,255,0.04)', cursor: 'pointer' }}
+                                        onClick={() => setViewingBug(ab)}
+                                    >
                                         <div className="bug-card-id">BUG ID: {ab.bugId} &nbsp; {ab.tag}</div>
                                         <div className="bug-card-name">{ab.name}</div>
-                                        <div className="text-xs text-sec mb-12">{ab.description}</div>
+                                        <div className="text-xs text-sec mb-12">
+                                            {ab.description?.includes("PREVIEW:") ? ab.description.split("FULL:")[0].replace("PREVIEW:", "").trim() : ab.description}
+                                        </div>
                                         <div className="bug-card-meta">
                                             <div className="bug-meta-item">
                                                 <span className="bug-meta-label">Market Value</span>
@@ -196,13 +228,18 @@ export default function TeamPage({ params }) {
                                                 <span className={`bug-meta-value ${diffColor}`}>{ab.difficulty}</span>
                                             </div>
                                         </div>
+                                        <div className="mt-12 text-center">
+                                            <span className="text-xs neon-blue" style={{ letterSpacing: '2px' }}>[ ANALYSIS PREVIEW ]</span>
+                                        </div>
                                     </div>
                                 );
                             })() : (
                                 <div className="text-center" style={{ padding: '32px 20px' }}>
                                     <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>🔍</div>
                                     <div className="text-sec" style={{ fontSize: '0.85rem' }}>
-                                        {isEnded ? "Auction has ended." : "Waiting for admin to reveal a bug..."}
+                                        {room?.rebiddingStatus === "ACCEPTING" ? "Rebidding phase active. You can sell bugs now." :
+                                            room?.rebiddingStatus === "AUCTION" ? "Rebidding auction is live!" :
+                                                isEnded ? "Auction has ended." : "Waiting for admin to reveal a bug..."}
                                     </div>
                                 </div>
                             )}
@@ -225,9 +262,16 @@ export default function TeamPage({ params }) {
                                     const submissionEntry = submissions[p.bugId];
 
                                     return (
-                                        <div key={i} className="bug-card" style={{ marginBottom: '16px' }}>
+                                        <div key={i} className="bug-card" style={{ marginBottom: '16px', cursor: 'pointer' }} onClick={() => setViewingBug(p)}>
                                             <div className="bug-card-id">{p.bugId} {p.tag}</div>
                                             <div className="bug-card-name">{p.bugName}</div>
+                                            <div className="text-xs text-sec mt-8 mb-12">
+                                                {!isEnded ? (
+                                                    p.description?.includes("PREVIEW:") ? p.description.split("FULL:")[0].replace("PREVIEW:", "").trim() : p.description
+                                                ) : (
+                                                    <span className="neon-green" style={{ fontSize: '0.65rem' }}>🔓 DATA DECRYPTED — CLICK TO VIEW</span>
+                                                )}
+                                            </div>
                                             <div className="bug-card-meta">
                                                 <div className="bug-meta-item">
                                                     <span className="bug-meta-label">Price Paid</span>
@@ -241,7 +285,10 @@ export default function TeamPage({ params }) {
 
                                             {/* Submission Status + Score/Profit */}
                                             {isEnded && (
-                                                <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                                                <div
+                                                    style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     {!submissionEntry ? (
                                                         <button
                                                             className="btn btn-blue btn-sm"
@@ -284,6 +331,19 @@ export default function TeamPage({ params }) {
                                                             <span className="badge badge-green" style={{ fontSize: '0.62rem', alignSelf: 'flex-start' }}>✅ SCORED</span>
                                                         </div>
                                                     )}
+                                                </div>
+                                            )}
+
+                                            {/* Rebidding Action */}
+                                            {room?.rebiddingStatus === "ACCEPTING" && !submissionEntry && (
+                                                <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
+                                                    <button
+                                                        className="btn btn-amber btn-sm"
+                                                        style={{ width: '100%', fontSize: '0.65rem', boxShadow: '0 0 10px rgba(255, 191, 0, 0.3)' }}
+                                                        onClick={(e) => { e.stopPropagation(); handleSellForRebid(p.bugId, p.price); }}
+                                                    >
+                                                        ♻️ SELL FOR REBID (₹{p.price?.toLocaleString()} Refund)
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -362,51 +422,39 @@ export default function TeamPage({ params }) {
             {/* Submit Solution Modal */}
             {submitModal && (
                 <div className="modal-overlay active">
-                    <div className="modal-box" style={{ maxWidth: '560px', width: '90%' }}>
-                        <h3 className="orbitron neon-blue" style={{ marginBottom: '8px' }}>📤 SUBMIT SOLUTION</h3>
-                        <div className="text-xs text-sec" style={{ marginBottom: '20px' }}>
-                            {submitModal.bugId} — {submitModal.bugName} · Paid: ₹{submitModal.purchasePrice?.toLocaleString()}
-                        </div>
-
-                        <div className="input-group">
-                            <label className="input-label">Your Solution Code</label>
-                            <textarea
-                                className="input"
-                                rows={10}
-                                placeholder="Paste your solution code here..."
-                                value={solutionCode}
-                                onChange={(e) => setSolutionCode(e.target.value)}
-                                style={{
-                                    fontFamily: 'monospace',
-                                    fontSize: '0.82rem',
-                                    resize: 'vertical',
-                                    minHeight: '180px',
-                                    lineHeight: '1.5',
-                                }}
-                            />
-                        </div>
-
-                        {submitMsg && (
-                            <div style={{ fontSize: '0.82rem', marginBottom: '12px', color: submitMsg.startsWith('✅') ? 'var(--neon-green)' : 'var(--neon-amber)' }}>
-                                {submitMsg}
+                    <div className="modal-box" style={{ maxWidth: '900px', width: '95%', padding: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                            <div>
+                                <h3 className="orbitron neon-blue" style={{ marginBottom: '4px', textShadow: '0 0 10px rgba(0,255,255,0.3)' }}>📤 SUBMIT SOLUTION</h3>
+                                <div className="text-xs text-sec">
+                                    {submitModal.bugId} — {submitModal.bugName} · Paid: ₹{submitModal.purchasePrice?.toLocaleString()}
+                                </div>
                             </div>
-                        )}
-
-                        <div className="btn-row mt-24">
-                            <button
-                                className="btn btn-green flex-1"
-                                onClick={handleSubmit}
-                                disabled={submitting || !solutionCode.trim()}
-                            >
-                                {submitting ? "SUBMITTING..." : "CONFIRM SUBMIT"}
-                            </button>
-                            <button className="btn btn-purple flex-1" onClick={() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }}>
-                                CANCEL
+                            <button className="btn btn-purple btn-sm" onClick={() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }}>
+                                CLOSE
                             </button>
                         </div>
+
+                        <CodeEditor
+                            code={solutionCode}
+                            onChange={setSolutionCode}
+                            language={selectedLanguage}
+                            onLanguageChange={setSelectedLanguage}
+                            onSubmit={handleSubmit}
+                            submitting={submitting}
+                            submitMsg={submitMsg}
+                            bugInfo={submitModal}
+                        />
                     </div>
                 </div>
             )}
+
+            {/* Bug Details Modal */}
+            <BugDetailsModal
+                bug={viewingBug}
+                onClose={() => setViewingBug(null)}
+                full={isEnded && myData?.purchases?.some(p => (p.bugId === viewingBug?.bugId || p.bugName === viewingBug?.name))}
+            />
         </>
     );
 }

@@ -30,8 +30,8 @@ export async function POST(request, { params }) {
             );
         }
 
-        // Find bug
-        const bug = await Bug.findById(bugId);
+        // Find bug by string ID (e.g. BUG-001)
+        const bug = await Bug.findOne({ bugId });
         if (!bug) {
             return NextResponse.json({ error: "Bug not found" }, { status: 404 });
         }

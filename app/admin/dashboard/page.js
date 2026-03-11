@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import BugDetailsModal from "@/components/BugDetailsModal";
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -26,10 +27,15 @@ export default function AdminDashboard() {
     const [allotTeamId, setAllotTeamId] = useState("");
 
     // Submissions tab
-    const [centerTab, setCenterTab] = useState("auction"); // "auction" | "submissions"
+    const [centerTab, setCenterTab] = useState("auction"); // "auction" | "submissions" | "rebidding"
     const [submissions, setSubmissions] = useState([]);
     const [scoreInputs, setScoreInputs] = useState({}); // { submissionId: scoreValue }
     const [expandedCode, setExpandedCode] = useState(null); // submissionId with code visible
+    const [viewingBug, setViewingBug] = useState(null);
+
+    // Rebidding tab
+    const [rebidPool, setRebidPool] = useState([]);
+    const [rebidStatus, setRebidStatus] = useState("INACTIVE"); // INACTIVE | ACCEPTING | AUCTION
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -84,14 +90,26 @@ export default function AdminDashboard() {
         } catch (err) { console.error(err); }
     }, [selectedRoom, user]);
 
+    // Fetch rebid pool
+    const fetchRebidPool = useCallback(async () => {
+        if (!selectedRoom) return;
+        try {
+            const res = await fetch(`/api/rebid/pool?roomCode=${selectedRoom.roomId}`);
+            const data = await res.json();
+            if (data.success) setRebidPool(data.pool);
+        } catch (err) { console.error(err); }
+    }, [selectedRoom]);
+
     useEffect(() => { fetchRooms(); fetchBugs(); }, [fetchRooms, fetchBugs]);
     useEffect(() => {
         if (!selectedRoom) return;
         fetchTeams();
         fetchSubmissions();
-        const interval = setInterval(() => { fetchTeams(); fetchSubmissions(); }, 3000);
+        fetchRebidPool();
+        setRebidStatus(selectedRoom.rebiddingStatus || "INACTIVE");
+        const interval = setInterval(() => { fetchTeams(); fetchSubmissions(); fetchRebidPool(); }, 3000);
         return () => clearInterval(interval);
-    }, [selectedRoom, fetchTeams, fetchSubmissions]);
+    }, [selectedRoom, fetchTeams, fetchSubmissions, fetchRebidPool]);
 
     const handleCreateRoom = async () => {
         if (!roomName.trim()) return;
@@ -128,11 +146,11 @@ export default function AdminDashboard() {
             const res = await fetch(`/api/rooms/${selectedRoom.roomId}/show`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: user._id, bugId: bug._id }),
+                body: JSON.stringify({ userId: user._id, bugId: bug.bugId }),
             });
             const data = await res.json();
             if (data.success) {
-                setActiveBugId(bug._id);
+                setActiveBugId(bug.bugId);
                 addFeed(`🔴 LIVE: ${bug.bugId} – ${bug.name}`, "blue");
             } else {
                 addFeed(data.error, "amber");
@@ -149,7 +167,7 @@ export default function AdminDashboard() {
                 body: JSON.stringify({
                     userId: user._id,
                     teamPlayerId: allotTeamId,
-                    bugId: allotModal._id,
+                    bugId: allotModal.bugId,
                     price: allotPrice,
                 }),
             });
@@ -202,6 +220,37 @@ export default function AdminDashboard() {
                 addFeed(data.error, "amber");
             }
         } catch (err) { addFeed("Failed to score submission", "amber"); }
+    };
+
+    const handleUpdateRebidStatus = async (newStatus) => {
+        if (!selectedRoom) return;
+        try {
+            const res = await fetch("/api/rebid/status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomCode: selectedRoom.roomId, userId: user._id, status: newStatus }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setRebidStatus(newStatus);
+                addFeed(`Rebidding: ${newStatus}`, "blue");
+            }
+        } catch (err) { addFeed("Failed to update rebid status", "amber"); }
+    };
+
+    const handleStartRebidAuction = async (rebidId) => {
+        if (!selectedRoom) return;
+        try {
+            const res = await fetch("/api/rebid/auction", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomCode: selectedRoom.roomId, userId: user._id, rebidId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                addFeed(data.message, "blue");
+            }
+        } catch (err) { addFeed("Failed to start rebid auction", "amber"); }
     };
 
     const PHASE_STYLE = {
@@ -342,6 +391,13 @@ export default function AdminDashboard() {
                                 >
                                     📋 Submissions {submissions.length > 0 && <span className="badge badge-green" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{submissions.length}</span>}
                                 </button>
+                                <button
+                                    className={`btn btn-sm ${centerTab === 'rebidding' ? 'btn-amber' : ''}`}
+                                    style={centerTab !== 'rebidding' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    onClick={() => setCenterTab("rebidding")}
+                                >
+                                    ♻️ Rebidding {rebidPool.length > 0 && <span className="badge badge-amber" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{rebidPool.length}</span>}
+                                </button>
                             </div>
 
                             {centerTab === "auction" ? (
@@ -372,7 +428,7 @@ export default function AdminDashboard() {
                                         bugs.map((bug) => {
                                             const diffColor = bug.difficulty === "Expert" ? "neon-purple" : bug.difficulty === "Hard" ? "neon-amber" : bug.difficulty === "Medium" ? "neon-blue" : "neon-green";
                                             return (
-                                                <div key={bug._id} className="bug-card" style={{ marginBottom: '16px' }}>
+                                                <div key={bug._id} className="bug-card" style={{ marginBottom: '16px', cursor: 'pointer' }} onClick={() => setViewingBug(bug)}>
                                                     <div className="bug-card-id">BUG ID: {bug.bugId} &nbsp; {bug.tag}</div>
                                                     <div className="bug-card-name">{bug.name}</div>
                                                     <div className="text-xs text-sec mb-12">{bug.description}</div>
@@ -389,14 +445,14 @@ export default function AdminDashboard() {
                                                             {selectedRoom && (
                                                                 <button
                                                                     className="btn btn-blue btn-sm"
-                                                                    onClick={() => handleShowBug(bug)}
-                                                                    style={activeBugId === bug._id ? { background: 'var(--neon-blue)', color: '#000' } : {}}
+                                                                    onClick={(e) => { e.stopPropagation(); handleShowBug(bug); }}
+                                                                    style={activeBugId === bug.bugId ? { background: 'var(--neon-blue)', color: '#000' } : {}}
                                                                 >
-                                                                    {activeBugId === bug._id ? '🔴 LIVE' : '👁 SHOW'}
+                                                                    {activeBugId === bug.bugId ? '🔴 LIVE' : '👁 SHOW'}
                                                                 </button>
                                                             )}
                                                             {selectedRoom && teams.length > 0 && (
-                                                                <button className="btn btn-purple btn-sm" onClick={() => { setAllotModal(bug); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
+                                                                <button className="btn btn-purple btn-sm" onClick={(e) => { e.stopPropagation(); setAllotModal(bug); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
                                                                     🎯 ALLOT
                                                                 </button>
                                                             )}
@@ -405,6 +461,101 @@ export default function AdminDashboard() {
                                                 </div>
                                             );
                                         })
+                                    )}
+                                </>
+                            ) : centerTab === "rebidding" ? (
+                                /* Rebidding Tab */
+                                <>
+                                    <h3 className="orbitron mb-20" style={{ fontSize: '0.95rem' }}>REBIDDING MANAGEMENT</h3>
+                                    {!selectedRoom ? (
+                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>Select a room first.</div>
+                                    ) : (
+                                        <>
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <div className="panel-title mb-12">Rebidding Control</div>
+                                                <div className="btn-row">
+                                                    <button
+                                                        className={`btn btn-sm ${rebidStatus === 'ACCEPTING' ? 'btn-green' : ''}`}
+                                                        style={rebidStatus !== 'ACCEPTING' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                                        onClick={() => handleUpdateRebidStatus("ACCEPTING")}
+                                                    >
+                                                        ACCEPT REBIDS
+                                                    </button>
+                                                    <button
+                                                        className={`btn btn-sm ${rebidStatus === 'INACTIVE' ? 'btn-amber' : ''}`}
+                                                        style={rebidStatus !== 'INACTIVE' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                                        onClick={() => handleUpdateRebidStatus("INACTIVE")}
+                                                    >
+                                                        STOP ACCEPTING
+                                                    </button>
+                                                    <button
+                                                        className={`btn btn-sm ${rebidStatus === 'AUCTION' ? 'btn-blue' : ''}`}
+                                                        style={rebidStatus !== 'AUCTION' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                                        onClick={() => handleUpdateRebidStatus("AUCTION")}
+                                                    >
+                                                        START REBID AUCTION
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="section-divider"></div>
+
+                                            <div className="panel-title mb-16">Rebid Pool ({rebidPool.length})</div>
+                                            {rebidPool.length === 0 ? (
+                                                <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>The rebid pool is empty.</div>
+                                            ) : (
+                                                <div style={{ overflowX: 'auto' }}>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                                        <thead>
+                                                            <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                                                <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>BUG</th>
+                                                                <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>PREV OWNER</th>
+                                                                <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>ORIG PRICE</th>
+                                                                <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>STATUS</th>
+                                                                <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>ACTION</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rebidPool.map((item) => (
+                                                                <tr key={item._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                    <td style={{ padding: '10px 8px' }}>
+                                                                        <div style={{ fontWeight: 600 }}>{item.bugId?.name}</div>
+                                                                        <div className="text-xs text-sec">{item.bugId?.bugId}</div>
+                                                                    </td>
+                                                                    <td style={{ padding: '10px 8px' }}>{item.previousTeamName}</td>
+                                                                    <td style={{ padding: '10px 8px', textAlign: 'right' }} className="neon-green">₹{item.originalPrice?.toLocaleString()}</td>
+                                                                    <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                        <span className={`badge ${item.status === 'SOLD' ? 'badge-green' : item.status === 'AUCTIONING' ? 'badge-blue' : 'badge-amber'}`}>
+                                                                            {item.status}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                        {item.status === 'WAITING' && rebidStatus === 'AUCTION' && (
+                                                                            <button
+                                                                                className="btn btn-blue btn-sm"
+                                                                                style={{ fontSize: '0.65rem' }}
+                                                                                onClick={() => handleStartRebidAuction(item._id)}
+                                                                            >
+                                                                                🚀 AUCTION
+                                                                            </button>
+                                                                        )}
+                                                                        {item.status === 'AUCTIONING' && (
+                                                                            <button
+                                                                                className="btn btn-purple btn-sm"
+                                                                                style={{ fontSize: '0.65rem' }}
+                                                                                onClick={() => { setAllotModal(item.bugId); setAllotPrice(item.bugId.marketValue); setAllotTeamId(teams[0]?._id || ""); }}
+                                                                            >
+                                                                                🎯 ALLOT
+                                                                            </button>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </>
                             ) : (
@@ -569,33 +720,42 @@ export default function AdminDashboard() {
             </div>
 
             {/* Allot Modal */}
-            {allotModal && (
-                <div className="modal-overlay active">
-                    <div className="modal-box">
-                        <h3 className="orbitron neon-purple">ALLOT BUG TO TEAM</h3>
-                        <div className="bug-card" style={{ marginBottom: '20px' }}>
-                            <div className="bug-card-id">{allotModal.bugId} {allotModal.tag}</div>
-                            <div className="bug-card-name">{allotModal.name}</div>
-                        </div>
-                        <div className="input-group">
-                            <label className="input-label">Select Team</label>
-                            <select className="input" value={allotTeamId} onChange={(e) => setAllotTeamId(e.target.value)}>
-                                {teams.map((t) => (
-                                    <option key={t._id} value={t._id}>{t.teamName} — ₹{t.coins?.toLocaleString()}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="input-group">
-                            <label className="input-label">Allot Price (₹)</label>
-                            <input type="number" className="input" value={allotPrice} onChange={(e) => setAllotPrice(parseInt(e.target.value) || 0)} />
-                        </div>
-                        <div className="btn-row mt-24">
-                            <button className="btn btn-green flex-1" onClick={handleAllot}>CONFIRM ALLOT</button>
-                            <button className="btn btn-purple flex-1" onClick={() => setAllotModal(null)}>CANCEL</button>
+            {
+                allotModal && (
+                    <div className="modal-overlay active">
+                        <div className="modal-box">
+                            <h3 className="orbitron neon-purple">ALLOT BUG TO TEAM</h3>
+                            <div className="bug-card" style={{ marginBottom: '20px' }}>
+                                <div className="bug-card-id">{allotModal.bugId} {allotModal.tag}</div>
+                                <div className="bug-card-name">{allotModal.name}</div>
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Select Team</label>
+                                <select className="input" value={allotTeamId} onChange={(e) => setAllotTeamId(e.target.value)}>
+                                    {teams.map((t) => (
+                                        <option key={t._id} value={t._id}>{t.teamName} — ₹{t.coins?.toLocaleString()}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="input-group">
+                                <label className="input-label">Allot Price (₹)</label>
+                                <input type="number" className="input" value={allotPrice} onChange={(e) => setAllotPrice(parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div className="btn-row mt-24">
+                                <button className="btn btn-green flex-1" onClick={handleAllot}>CONFIRM ALLOT</button>
+                                <button className="btn btn-purple flex-1" onClick={() => setAllotModal(null)}>CANCEL</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* Bug Details Modal */}
+            <BugDetailsModal
+                bug={viewingBug}
+                onClose={() => setViewingBug(null)}
+                full={auctionPhase === "ENDED"}
+            />
         </>
     );
 }
