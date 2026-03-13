@@ -1,0 +1,50 @@
+[
+  {
+    "cardId": "PC001",
+    "name": "Hint Surge",
+    "description": "Unlock one extra hint instantly for any one bug during solving.",
+    "marketValue": 300,
+    "rarity": "Common",
+    "tag": "🟦"
+  },
+  {
+    "cardId": "PC002",
+    "name": "Time Warp",
+    "description": "Gain 5 extra minutes for one selected submission.",
+    "marketValue": 450,
+    "rarity": "Rare",
+    "tag": "🟪"
+  },
+  {
+    "cardId": "PC003",
+    "name": "Rollback Shield",
+    "description": "Protect one scored submission from a penalty adjustment.",
+    "marketValue": 650,
+    "rarity": "Epic",
+    "tag": "🟧"
+  },
+  {
+    "cardId": "PC004",
+    "name": "Double Debug",
+    "description": "Submit two attempts for one bug and keep the better score.",
+    "marketValue": 900,
+    "rarity": "Legendary",
+    "tag": "🟥"
+  },
+  {
+    "cardId": "PC005",
+    "name": "Market Spy",
+    "description": "Preview one hidden bug detail before full reveal.",
+    "marketValue": 500,
+    "rarity": "Rare",
+    "tag": "🟪"
+  },
+  {
+    "cardId": "PC006",
+    "name": "Safety Net",
+    "description": "Recover 20% of purchase price on one failed submission.",
+    "marketValue": 700,
+    "rarity": "Epic",
+    "tag": "🟧"
+  }
+]

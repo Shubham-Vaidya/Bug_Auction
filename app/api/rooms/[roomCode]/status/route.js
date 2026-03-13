@@ -8,7 +8,10 @@ export async function GET(request, { params }) {
         const { roomCode } = await params;
 
         const room = await Room.findOne({ roomId: roomCode.toUpperCase() })
-            .populate("activeBug", "bugId name description marketValue difficulty tag");
+            .setOptions({ strictPopulate: false })
+            .populate("activeBug", "bugId name description marketValue difficulty tag")
+            .populate("activePowerCard", "cardId name description marketValue rarity tag");
+        
         if (!room) {
             return NextResponse.json(
                 { error: "Room not found" },
@@ -26,7 +29,9 @@ export async function GET(request, { params }) {
                 status: room.status,
                 createdAt: room.createdAt,
                 activeBug: room.activeBug || null,
+                activePowerCard: room.activePowerCard || null,
                 rebiddingStatus: room.rebiddingStatus || "INACTIVE",
+                powerCardStatus: room.powerCardStatus || "WAITING",
             },
         });
     } catch (error) {
@@ -42,7 +47,7 @@ export async function POST(request, { params }) {
     try {
         await dbConnect();
         const { roomCode } = await params;
-        const { status, userId } = await request.json();
+        const { status, userId, scope = "BUG" } = await request.json();
 
         if (!status || !userId) {
             return NextResponse.json({ error: "Missing status or userId" }, { status: 400 });
@@ -58,10 +63,20 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        room.status = status;
+        if (scope === "POWER") {
+            if (room.status !== "ENDED") {
+                return NextResponse.json(
+                    { error: "Bug auction must end before power card phase starts" },
+                    { status: 400 }
+                );
+            }
+            room.powerCardStatus = status;
+        } else {
+            room.status = status;
+        }
         await room.save();
 
-        return NextResponse.json({ success: true, message: `Room status updated to ${status}` });
+        return NextResponse.json({ success: true, message: `${scope} status updated to ${status}` });
     } catch (error) {
         console.error("Update room status error:", error);
         return NextResponse.json({ error: "Failed to update status" }, { status: 500 });

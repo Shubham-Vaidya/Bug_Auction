@@ -30,13 +30,42 @@ const RoomSchema = new mongoose.Schema(
             ref: "Bug",
             default: null,
         },
+        activePowerCard: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PowerCard",
+            default: null,
+        },
         rebiddingStatus: {
             type: String,
             enum: ["INACTIVE", "ACCEPTING", "AUCTION"],
             default: "INACTIVE",
         },
+        powerCardStatus: {
+            type: String,
+            enum: ["WAITING", "LIVE", "ENDED"],
+            default: "WAITING",
+        },
     },
     { timestamps: true }
 );
 
-export default mongoose.models.Room || mongoose.model("Room", RoomSchema);
+const RoomModel = mongoose.models.Room || mongoose.model("Room", RoomSchema);
+
+// In Next.js dev/hot-reload, an old compiled model can survive schema edits.
+// Ensure new fields are present on cached models to avoid StrictPopulateError.
+if (!RoomModel.schema.path("activePowerCard") || !RoomModel.schema.path("powerCardStatus")) {
+    RoomModel.schema.add({
+        activePowerCard: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PowerCard",
+            default: null,
+        },
+        powerCardStatus: {
+            type: String,
+            enum: ["WAITING", "LIVE", "ENDED"],
+            default: "WAITING",
+        },
+    });
+}
+
+export default RoomModel;

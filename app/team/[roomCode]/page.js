@@ -169,8 +169,8 @@ export default function TeamPage({ params }) {
                         {roomCode}
                     </div>
                     {room && (
-                        <span className={`badge ${room.status === 'LIVE' ? 'badge-green' : room.status === 'ENDED' ? 'badge-blue' : 'badge-gray'}`}>
-                            {room.status}
+                        <span className={`badge ${room.powerCardStatus === 'LIVE' || room.status === 'LIVE' ? 'badge-green' : room.powerCardStatus === 'ENDED' ? 'badge-blue' : room.status === 'ENDED' ? 'badge-blue' : 'badge-gray'}`}>
+                            {room.powerCardStatus === 'LIVE' ? 'POWER LIVE' : room.powerCardStatus === 'ENDED' ? 'POWER ENDED' : room.status}
                         </span>
                     )}
                 </div>
@@ -239,7 +239,55 @@ export default function TeamPage({ params }) {
                                     <div className="text-sec" style={{ fontSize: '0.85rem' }}>
                                         {room?.rebiddingStatus === "ACCEPTING" ? "Rebidding phase active. You can sell bugs now." :
                                             room?.rebiddingStatus === "AUCTION" ? "Rebidding auction is live!" :
+                                                room?.powerCardStatus === "LIVE" ? "Power card auction is live below." :
                                                 isEnded ? "Auction has ended." : "Waiting for admin to reveal a bug..."}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* LIVE POWER CARD Section */}
+                        <div className="card" style={{ marginBottom: '16px', border: 'none', boxShadow: 'none' }}>
+                            <div className="panel-title underline-blue">Live Auction</div>
+                            <h3 className="orbitron mb-20 neon-green" style={{ fontSize: '1rem' }}>LIVE POWER CARD</h3>
+
+                            {(room?.activePowerCard && room.powerCardStatus === "LIVE") ? (() => {
+                                const pc = room.activePowerCard;
+                                const rarityColor = pc.rarity === "Legendary" ? "neon-purple" : pc.rarity === "Epic" ? "neon-amber" : pc.rarity === "Rare" ? "neon-blue" : "neon-green";
+                                return (
+                                    <div
+                                        className="bug-card"
+                                        style={{ marginBottom: 0, border: '1px solid rgba(0,255,65,0.35)', background: 'rgba(0,255,65,0.04)' }}
+                                    >
+                                        <div className="bug-card-id">POWER CARD: {pc.cardId} &nbsp; {pc.tag}</div>
+                                        <div className="bug-card-name">{pc.name}</div>
+                                        <div className="text-xs text-sec mb-12">{pc.description}</div>
+                                        <div className="bug-card-meta">
+                                            <div className="bug-meta-item">
+                                                <span className="bug-meta-label">Market Value</span>
+                                                <span className="bug-meta-value neon-green">₹{pc.marketValue?.toLocaleString()}</span>
+                                            </div>
+                                            <div className="bug-meta-item">
+                                                <span className="bug-meta-label">Rarity</span>
+                                                <span className={`bug-meta-value ${rarityColor}`}>{pc.rarity}</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-12 text-center">
+                                            <span className="text-xs neon-green" style={{ letterSpacing: '2px' }}>[ POWER CARD AUCTION LIVE ]</span>
+                                        </div>
+                                    </div>
+                                );
+                            })() : (
+                                <div className="text-center" style={{ padding: '24px 20px' }}>
+                                    <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>⚡</div>
+                                    <div className="text-sec" style={{ fontSize: '0.85rem' }}>
+                                        {room?.status !== "ENDED"
+                                            ? "Power card auction will unlock after bug auction ends."
+                                            : room?.powerCardStatus === "WAITING"
+                                                ? "Waiting for admin to start power card auction."
+                                                : room?.powerCardStatus === "ENDED"
+                                                    ? "Power card auction has ended."
+                                                    : "Waiting for admin to reveal a power card..."}
                                     </div>
                                 </div>
                             )}
@@ -351,6 +399,40 @@ export default function TeamPage({ params }) {
                                 })
                             )}
                         </div>
+
+                        {/* POWER CARDS ACQUIRED Section */}
+                        <div className="card border-green" style={{ marginTop: '16px' }}>
+                            <div className="panel-title">Your Power Cards</div>
+                            <h3 className="orbitron mb-24" style={{ fontSize: '1rem' }}>POWER PORTFOLIO</h3>
+
+                            {!myData || myData.powerCardPurchases?.length === 0 ? (
+                                <div className="text-center" style={{ padding: '28px 20px' }}>
+                                    <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>⚡</div>
+                                    <div className="text-sec">No power cards purchased yet.</div>
+                                </div>
+                            ) : (
+                                myData.powerCardPurchases?.map((pc, i) => {
+                                    const rarityColor = pc.rarity === "Legendary" ? "neon-purple" : pc.rarity === "Epic" ? "neon-amber" : pc.rarity === "Rare" ? "neon-blue" : "neon-green";
+                                    return (
+                                        <div key={`${pc.cardId}-${i}`} className="bug-card" style={{ marginBottom: '12px' }}>
+                                            <div className="bug-card-id">{pc.cardId} {pc.tag}</div>
+                                            <div className="bug-card-name">{pc.cardName}</div>
+                                            <div className="text-xs text-sec mt-8 mb-12">{pc.description}</div>
+                                            <div className="bug-card-meta">
+                                                <div className="bug-meta-item">
+                                                    <span className="bug-meta-label">Price Paid</span>
+                                                    <span className="bug-meta-value neon-green">₹{pc.price?.toLocaleString()}</span>
+                                                </div>
+                                                <div className="bug-meta-item">
+                                                    <span className="bug-meta-label">Rarity</span>
+                                                    <span className={`bug-meta-value ${rarityColor}`}>{pc.rarity}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
 
 
@@ -396,6 +478,10 @@ export default function TeamPage({ params }) {
                                     <div className="stats-row-item">
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>BUGS WON</span>
                                         <span className="orbitron neon-purple">{myData.bugsWon}</span>
+                                    </div>
+                                    <div className="stats-row-item">
+                                        <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>POWER CARDS</span>
+                                        <span className="orbitron neon-green">{myData.powerCardPurchases?.length || 0}</span>
                                     </div>
                                     <div className="stats-row-item">
                                         <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>ROOM</span>
