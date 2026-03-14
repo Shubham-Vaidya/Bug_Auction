@@ -8,9 +8,7 @@ export default function CodeEditor({ code, onChange, language, onLanguageChange,
 
     const languages = [
         { id: "python", name: "Python" },
-        { id: "javascript", name: "JavaScript" },
         { id: "java", name: "Java" },
-        { id: "cpp", name: "C++" },
         { id: "c", name: "C" },
     ];
 

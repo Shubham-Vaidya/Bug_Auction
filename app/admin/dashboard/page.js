@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import BugDetailsModal from "@/components/BugDetailsModal";
 
 export default function AdminDashboard() {
@@ -310,42 +311,54 @@ export default function AdminDashboard() {
         ENDED: { cls: "badge-blue", label: "🏁 ENDED" },
     };
     const phase = PHASE_STYLE[auctionPhase] || PHASE_STYLE.WAITING;
+    const inactiveTabClass = "border border-white/15 bg-transparent text-slate-300";
 
     if (!user) return null;
 
     return (
-        <>
-            {/* Top Bar */}
-            <div className="top-bar">
-                <div className="top-bar-title neon-green">⚡ BUG AUCTION ARENA</div>
-                <div className="top-bar-center">
-                    {selectedRoom && (
-                        <div className="room-chip">
-                            <div className="room-chip-dot"></div>
-                            ROOM: {selectedRoom.roomId}
-                        </div>
-                    )}
+        <div className="admin-theme">
+            <Image
+                src="/TeamBackground.png"
+                alt="Team arena background"
+                width={1920}
+                height={1080}
+                className="pointer-events-none fixed inset-0 h-screen w-screen object-cover"
+                priority
+            />
+            <div className="pointer-events-none fixed inset-0 h-screen bg-black/60" />
 
-                    <span className={`badge ${phase.cls}`} style={{ fontSize: '0.62rem', padding: '5px 13px', letterSpacing: '1px' }}>
-                        STATUS: {phase.label}
-                    </span>
-                </div>
-                <div className="btn-row">
-                    <button className="btn btn-purple btn-sm" onClick={() => { localStorage.removeItem("user"); router.push("/"); }}>
-                        LOGOUT
-                    </button>
-                </div>
-            </div>
+            <div className="relative z-20">
+                {/* Top Bar */}
+                <div className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/20 bg-black/40 px-5 py-4 backdrop-blur-md">
+                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">⚡ BUG AUCTION ARENA</div>
+                    <div className="flex items-center gap-3">
+                        {selectedRoom && (
+                            <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/60 bg-fuchsia-400/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-fuchsia-200">
+                                <div className="h-1.5 w-1.5 rounded-full bg-fuchsia-300"></div>
+                                ROOM: {selectedRoom.roomId}
+                            </div>
+                        )}
 
-            {/* Page Content */}
-            <div className="page">
-                <div className="admin-grid">
+                        <span className={`badge ${phase.cls}`}>
+                            STATUS: {phase.label}
+                        </span>
+                    </div>
+                    <div className="btn-row">
+                        <button className="btn btn-purple btn-sm" onClick={() => { localStorage.removeItem("user"); router.push("/"); }}>
+                            LOGOUT
+                        </button>
+                    </div>
+                </div>
+
+                {/* Page Content */}
+                <div className="w-screen px-4 py-4 sm:px-6">
+                    <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.95fr)_minmax(0,1.7fr)_minmax(260px,0.9fr)]">
 
                     {/* LEFT PANEL: Room Control */}
-                    <div className="panel">
+                    <div className="space-y-5">
                         <div className="card border-green">
-                            <div className="panel-title">Room Control</div>
-                            <h3 className="orbitron mb-20" style={{ fontSize: '0.95rem' }}>ARENA MANAGER</h3>
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Room Control</div>
+                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-white">ARENA MANAGER</h3>
 
                             <div className="input-group">
                                 <label className="input-label">Room Name</label>
@@ -360,9 +373,9 @@ export default function AdminDashboard() {
                             </button>
 
                             {selectedRoom && (
-                                <div style={{ padding: '14px 16px', borderRadius: '8px', background: 'rgba(0,255,65,0.06)', border: '1px solid rgba(0,255,65,0.2)', marginBottom: '24px' }}>
-                                    <div className="text-xs text-sec mb-8" style={{ letterSpacing: '2px' }}>ACTIVE ROOM</div>
-                                    <div className="orbitron neon-green" style={{ fontSize: '1.3rem', letterSpacing: '4px' }}>{selectedRoom.roomId}</div>
+                                <div className="mb-6 rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-4 py-3">
+                                    <div className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-300">ACTIVE ROOM</div>
+                                    <div className="text-2xl font-bold tracking-[0.2em] text-emerald-300">{selectedRoom.roomId}</div>
                                     <div className="text-xs text-sec mt-4">₹{selectedRoom.coinsPerTeam?.toLocaleString()} per team</div>
                                     <div className="text-xs text-sec mt-4">Bug Phase: {auctionPhase}</div>
                                     <div className="text-xs text-sec">Power Phase: {powerCardPhase}</div>
@@ -379,14 +392,18 @@ export default function AdminDashboard() {
                             <div className="section-divider"></div>
 
                             {/* Room List */}
-                            <div className="panel-title mb-12">Your Rooms</div>
+                            <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Your Rooms</div>
                             {rooms.length === 0 ? (
                                 <div className="text-xs text-sec">No rooms created yet</div>
                             ) : (
                                 rooms.map((r) => (
-                                    <div key={r._id} className="team-item" style={{ cursor: 'pointer', border: selectedRoom?._id === r._id ? '1px solid var(--neon-green)' : '1px solid var(--border-subtle)' }} onClick={() => { setSelectedRoom(r); setAuctionPhase(r.status); setPowerCardPhase(r.powerCardStatus || 'WAITING'); }}>
+                                    <div
+                                        key={r._id}
+                                        className={`flex items-center justify-between rounded-lg border border-white/15 bg-black/30 px-4 py-3 ${selectedRoom?._id === r._id ? "border-emerald-400/60!" : ""}`}
+                                        onClick={() => { setSelectedRoom(r); setAuctionPhase(r.status); setPowerCardPhase(r.powerCardStatus || 'WAITING'); }}
+                                    >
                                         <div>
-                                            <div className="mono" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{r.roomId}</div>
+                                            <div className="mono text-sm font-semibold">{r.roomId}</div>
                                             <div className="text-xs text-sec">{r.roomName}</div>
                                             <div className="text-xs text-sec">Power: {r.powerCardStatus || "WAITING"}</div>
                                         </div>
@@ -402,16 +419,16 @@ export default function AdminDashboard() {
                         {/* Joined Teams */}
                         {selectedRoom && (
                             <div className="card">
-                                <div className="panel-title mb-16">Joined Teams ({teams.length})</div>
+                                <div className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Joined Teams ({teams.length})</div>
                                 {teams.length === 0 ? (
                                     <div className="text-xs text-sec">No teams joined yet</div>
                                 ) : (
                                     teams.map((t) => (
-                                        <div key={t._id} className="team-item">
-                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div key={t._id} className="flex items-center justify-between rounded-lg border border-white/15 bg-black/30 px-4 py-3">
+                                            <div className="flex items-center">
                                                 <div className={`team-dot ${t.status === 'online' ? 'online' : 'idle'}`}></div>
                                                 <div>
-                                                    <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{t.teamName}</div>
+                                                    <div className="text-sm font-semibold">{t.teamName}</div>
                                                     <div className="text-xs text-sec">₹{t.coins?.toLocaleString()}</div>
                                                 </div>
                                             </div>
@@ -426,54 +443,50 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* CENTER PANEL: Bug List + Allot / Submissions */}
-                    <div className="panel">
+                    <div className="space-y-5">
                         <div className="card">
                             {/* Tab Header */}
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
+                            <div className="mb-5 flex flex-wrap gap-2 border-b border-white/15 pb-3">
                                 <button
-                                    className={`btn btn-sm ${centerTab === 'auction' ? 'btn-blue' : ''}`}
-                                    style={centerTab !== 'auction' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    className={centerTab === 'auction' ? 'btn btn-sm btn-blue' : `btn btn-sm ${inactiveTabClass}`}
                                     onClick={() => setCenterTab("auction")}
                                 >
                                     🎯 Auction Control
                                 </button>
                                 <button
-                                    className={`btn btn-sm ${centerTab === 'powercards' ? 'btn-green' : ''}`}
-                                    style={centerTab !== 'powercards' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    className={centerTab === 'powercards' ? 'btn btn-sm btn-green' : `btn btn-sm ${inactiveTabClass}`}
                                     onClick={() => setCenterTab("powercards")}
                                 >
-                                    ⚡ Power Cards {powerCards.length > 0 && <span className="badge badge-green" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{powerCards.length}</span>}
+                                    ⚡ Power Cards {powerCards.length > 0 && <span className="badge badge-green ml-1.5 text-[0.6rem]">{powerCards.length}</span>}
                                 </button>
                                 <button
-                                    className={`btn btn-sm ${centerTab === 'submissions' ? 'btn-purple' : ''}`}
-                                    style={centerTab !== 'submissions' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    className={centerTab === 'submissions' ? 'btn btn-sm btn-purple' : `btn btn-sm ${inactiveTabClass}`}
                                     onClick={() => setCenterTab("submissions")}
                                 >
-                                    📋 Submissions {submissions.length > 0 && <span className="badge badge-green" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{submissions.length}</span>}
+                                    📋 Submissions {submissions.length > 0 && <span className="badge badge-green ml-1.5 text-[0.6rem]">{submissions.length}</span>}
                                 </button>
                                 <button
-                                    className={`btn btn-sm ${centerTab === 'rebidding' ? 'btn-amber' : ''}`}
-                                    style={centerTab !== 'rebidding' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    className={centerTab === 'rebidding' ? 'btn btn-sm btn-amber' : `btn btn-sm ${inactiveTabClass}`}
                                     onClick={() => setCenterTab("rebidding")}
                                 >
-                                    ♻️ Rebidding {rebidPool.length > 0 && <span className="badge badge-amber" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{rebidPool.length}</span>}
+                                    ♻️ Rebidding {rebidPool.length > 0 && <span className="badge badge-amber ml-1.5 text-[0.6rem]">{rebidPool.length}</span>}
                                 </button>
                             </div>
 
                             {centerTab === "auction" ? (
                                 <>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                        <h3 className="orbitron" style={{ fontSize: '0.95rem' }}>BUG MARKETPLACE</h3>
+                                    <div className="mb-6 flex items-center justify-between">
+                                        <h3 className="text-2xl font-bold uppercase tracking-wide text-white">BUG MARKETPLACE</h3>
                                         <button className="btn btn-blue btn-sm" onClick={handleSeedBugs}>🐛 SEED BUGS</button>
                                     </div>
 
                                     {/* Auction Phase Controls */}
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <div className="panel-title mb-12">Auction Phase</div>
+                                    <div className="mb-4">
+                                        <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Auction Phase</div>
                                         <div className="btn-row">
-                                            <button className="btn btn-green btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("LIVE")} disabled={auctionPhase === "LIVE"}>▶ START</button>
-                                            <button className="btn btn-amber btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("PAUSED")} disabled={auctionPhase !== "LIVE"}>⏸ PAUSE</button>
-                                            <button className="btn btn-blue btn-sm" style={{ color: '#fff !important' }} onClick={() => updateRoomStatus("ENDED")} disabled={auctionPhase === "ENDED"}>🏁 END</button>
+                                            <button className="btn btn-green btn-sm text-white" onClick={() => updateRoomStatus("LIVE")} disabled={auctionPhase === "LIVE"}>▶ START</button>
+                                            <button className="btn btn-amber btn-sm text-white" onClick={() => updateRoomStatus("PAUSED")} disabled={auctionPhase !== "LIVE"}>⏸ PAUSE</button>
+                                            <button className="btn btn-blue btn-sm text-white" onClick={() => updateRoomStatus("ENDED")} disabled={auctionPhase === "ENDED"}>🏁 END</button>
                                         </div>
                                     </div>
 
@@ -481,32 +494,32 @@ export default function AdminDashboard() {
 
                                     {/* Bug Cards */}
                                     {bugs.length === 0 ? (
-                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>
+                                        <div className="p-6 text-center text-xs text-sec">
                                             No bugs loaded. Click &quot;SEED BUGS&quot; to load the bug pool.
                                         </div>
                                     ) : (
                                         bugs.map((bug) => {
                                             const diffColor = bug.difficulty === "Expert" ? "neon-purple" : bug.difficulty === "Hard" ? "neon-amber" : bug.difficulty === "Medium" ? "neon-blue" : "neon-green";
                                             return (
-                                                <div key={bug._id} className="bug-card" style={{ marginBottom: '16px', cursor: 'pointer' }} onClick={() => setViewingBug(bug)}>
-                                                    <div className="bug-card-id">BUG ID: {bug.bugId} &nbsp; {bug.tag}</div>
-                                                    <div className="bug-card-name">{bug.name}</div>
+                                                <div key={bug._id} className="mb-4 cursor-pointer rounded-xl border border-white/25 bg-black/35 p-4" onClick={() => setViewingBug(bug)}>
+                                                    <div className="text-xs uppercase tracking-widest text-slate-400">BUG ID: {bug.bugId} &nbsp; {bug.tag}</div>
+                                                    <div className="mt-1 text-xl font-bold text-white">{bug.name}</div>
                                                     <div className="text-xs text-sec mb-12">{bug.description}</div>
-                                                    <div className="bug-card-meta">
-                                                        <div className="bug-meta-item">
-                                                            <span className="bug-meta-label">Market Value</span>
-                                                            <span className={`bug-meta-value neon-green`}>₹{bug.marketValue?.toLocaleString()}</span>
+                                                    <div className="mt-3 flex flex-wrap gap-4">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-xs uppercase tracking-[0.08em] text-slate-400">Market Value</span>
+                                                            <span className="text-base font-semibold text-emerald-300">₹{bug.marketValue?.toLocaleString()}</span>
                                                         </div>
-                                                        <div className="bug-meta-item">
-                                                            <span className="bug-meta-label">Difficulty</span>
-                                                            <span className={`bug-meta-value ${diffColor}`}>{bug.difficulty}</span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-xs uppercase tracking-[0.08em] text-slate-400">Difficulty</span>
+                                                            <span className={`text-base font-semibold ${diffColor}`}>{bug.difficulty}</span>
                                                         </div>
-                                                        <div className="bug-meta-item" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                        <div className="flex flex-wrap gap-2.5">
                                                             {selectedRoom && (
                                                                 <button
                                                                     className="btn btn-blue btn-sm"
                                                                     onClick={(e) => { e.stopPropagation(); handleShowBug(bug); }}
-                                                                    style={activeBugId === bug.bugId ? { background: 'var(--neon-blue)', color: '#000' } : {}}
+                                                                    disabled={activeBugId === bug.bugId}
                                                                 >
                                                                     {activeBugId === bug.bugId ? '🔴 LIVE' : '👁 SHOW'}
                                                                 </button>
@@ -525,25 +538,23 @@ export default function AdminDashboard() {
                                 </>
                             ) : centerTab === "powercards" ? (
                                 <>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                        <h3 className="orbitron" style={{ fontSize: '0.95rem' }}>POWER CARD MARKET</h3>
+                                    <div className="mb-6 flex items-center justify-between">
+                                        <h3 className="text-2xl font-bold uppercase tracking-wide text-white">POWER CARD MARKET</h3>
                                         <button className="btn btn-green btn-sm" onClick={handleSeedPowerCards}>⚡ SEED POWER CARDS</button>
                                     </div>
 
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <div className="panel-title mb-12">Power Card Phase</div>
-                                        <div className="btn-row" style={{ marginBottom: '8px' }}>
+                                    <div className="mb-4">
+                                        <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Power Card Phase</div>
+                                        <div className="btn-row mb-2">
                                             <button
-                                                className="btn btn-green btn-sm"
-                                                style={{ color: '#fff !important' }}
+                                                className="btn btn-green btn-sm text-white"
                                                 onClick={() => updateRoomStatus("LIVE", "POWER")}
                                                 disabled={auctionPhase !== "ENDED" || powerCardPhase === "LIVE"}
                                             >
                                                 ▶ START
                                             </button>
                                             <button
-                                                className="btn btn-blue btn-sm"
-                                                style={{ color: '#fff !important' }}
+                                                className="btn btn-blue btn-sm text-white"
                                                 onClick={() => updateRoomStatus("ENDED", "POWER")}
                                                 disabled={powerCardPhase === "ENDED"}
                                             >
@@ -558,32 +569,31 @@ export default function AdminDashboard() {
                                     <div className="section-divider"></div>
 
                                     {powerCards.length === 0 ? (
-                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>
+                                        <div className="p-6 text-center text-xs text-sec">
                                             No power cards loaded. Click "SEED POWER CARDS" to load the pool.
                                         </div>
                                     ) : (
                                         powerCards.map((card) => {
                                             const rarityColor = card.rarity === "Legendary" ? "neon-purple" : card.rarity === "Epic" ? "neon-amber" : card.rarity === "Rare" ? "neon-blue" : "neon-green";
                                             return (
-                                                <div key={card._id} className="bug-card" style={{ marginBottom: '16px' }}>
-                                                    <div className="bug-card-id">CARD ID: {card.cardId} &nbsp; {card.tag}</div>
-                                                    <div className="bug-card-name">{card.name}</div>
+                                                <div key={card._id} className="mb-4 rounded-xl border border-white/25 bg-black/35 p-4">
+                                                    <div className="text-xs uppercase tracking-widest text-slate-400">CARD ID: {card.cardId} &nbsp; {card.tag}</div>
+                                                    <div className="mt-1 text-xl font-bold text-white">{card.name}</div>
                                                     <div className="text-xs text-sec mb-12">{card.description}</div>
-                                                    <div className="bug-card-meta">
-                                                        <div className="bug-meta-item">
-                                                            <span className="bug-meta-label">Market Value</span>
-                                                            <span className="bug-meta-value neon-green">₹{card.marketValue?.toLocaleString()}</span>
+                                                    <div className="mt-3 flex flex-wrap gap-4">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-xs uppercase tracking-[0.08em] text-slate-400">Market Value</span>
+                                                            <span className="text-base font-semibold text-emerald-300">₹{card.marketValue?.toLocaleString()}</span>
                                                         </div>
-                                                        <div className="bug-meta-item">
-                                                            <span className="bug-meta-label">Rarity</span>
-                                                            <span className={`bug-meta-value ${rarityColor}`}>{card.rarity}</span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-xs uppercase tracking-[0.08em] text-slate-400">Rarity</span>
+                                                            <span className={`text-base font-semibold ${rarityColor}`}>{card.rarity}</span>
                                                         </div>
-                                                        <div className="bug-meta-item" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                        <div className="flex flex-wrap gap-2.5">
                                                             {selectedRoom && (
                                                                 <button
                                                                     className="btn btn-blue btn-sm"
                                                                     onClick={() => handleShowPowerCard(card)}
-                                                                    style={activePowerCardId === card.cardId ? { background: 'var(--neon-blue)', color: '#000' } : {}}
                                                                     disabled={auctionPhase !== "ENDED" || powerCardPhase === "ENDED"}
                                                                 >
                                                                     {activePowerCardId === card.cardId ? '🔴 LIVE' : '👁 SHOW'}
@@ -608,31 +618,28 @@ export default function AdminDashboard() {
                             ) : centerTab === "rebidding" ? (
                                 /* Rebidding Tab */
                                 <>
-                                    <h3 className="orbitron mb-20" style={{ fontSize: '0.95rem' }}>REBIDDING MANAGEMENT</h3>
+                                    <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-white">REBIDDING MANAGEMENT</h3>
                                     {!selectedRoom ? (
-                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>Select a room first.</div>
+                                        <div className="p-6 text-center text-xs text-sec">Select a room first.</div>
                                     ) : (
                                         <>
-                                            <div style={{ marginBottom: '24px' }}>
-                                                <div className="panel-title mb-12">Rebidding Control</div>
+                                            <div className="mb-6">
+                                                <div className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Rebidding Control</div>
                                                 <div className="btn-row">
                                                     <button
-                                                        className={`btn btn-sm ${rebidStatus === 'ACCEPTING' ? 'btn-green' : ''}`}
-                                                        style={rebidStatus !== 'ACCEPTING' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                                        className={rebidStatus === 'ACCEPTING' ? 'btn btn-sm btn-green' : `btn btn-sm ${inactiveTabClass}`}
                                                         onClick={() => handleUpdateRebidStatus("ACCEPTING")}
                                                     >
                                                         ACCEPT REBIDS
                                                     </button>
                                                     <button
-                                                        className={`btn btn-sm ${rebidStatus === 'INACTIVE' ? 'btn-amber' : ''}`}
-                                                        style={rebidStatus !== 'INACTIVE' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                                        className={rebidStatus === 'INACTIVE' ? 'btn btn-sm btn-amber' : `btn btn-sm ${inactiveTabClass}`}
                                                         onClick={() => handleUpdateRebidStatus("INACTIVE")}
                                                     >
                                                         STOP ACCEPTING
                                                     </button>
                                                     <button
-                                                        className={`btn btn-sm ${rebidStatus === 'AUCTION' ? 'btn-blue' : ''}`}
-                                                        style={rebidStatus !== 'AUCTION' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                                        className={rebidStatus === 'AUCTION' ? 'btn btn-sm btn-blue' : `btn btn-sm ${inactiveTabClass}`}
                                                         onClick={() => handleUpdateRebidStatus("AUCTION")}
                                                     >
                                                         START REBID AUCTION
@@ -642,40 +649,39 @@ export default function AdminDashboard() {
 
                                             <div className="section-divider"></div>
 
-                                            <div className="panel-title mb-16">Rebid Pool ({rebidPool.length})</div>
+                                            <div className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Rebid Pool ({rebidPool.length})</div>
                                             {rebidPool.length === 0 ? (
-                                                <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>The rebid pool is empty.</div>
+                                                <div className="p-6 text-center text-xs text-sec">The rebid pool is empty.</div>
                                             ) : (
-                                                <div style={{ overflowX: 'auto' }}>
-                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full border-collapse text-[0.8rem]">
                                                         <thead>
-                                                            <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                                                <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>BUG</th>
-                                                                <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>PREV OWNER</th>
-                                                                <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>ORIG PRICE</th>
-                                                                <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>STATUS</th>
-                                                                <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontSize: '0.68rem' }}>ACTION</th>
+                                                            <tr className="border-b border-white/15">
+                                                                <th className="px-2 py-2.5 text-left text-[0.68rem] text-slate-300">BUG</th>
+                                                                <th className="px-2 py-2.5 text-left text-[0.68rem] text-slate-300">PREV OWNER</th>
+                                                                <th className="px-2 py-2.5 text-right text-[0.68rem] text-slate-300">ORIG PRICE</th>
+                                                                <th className="px-2 py-2.5 text-center text-[0.68rem] text-slate-300">STATUS</th>
+                                                                <th className="px-2 py-2.5 text-center text-[0.68rem] text-slate-300">ACTION</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {rebidPool.map((item) => (
-                                                                <tr key={item._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                                                    <td style={{ padding: '10px 8px' }}>
-                                                                        <div style={{ fontWeight: 600 }}>{item.bugId?.name}</div>
+                                                                <tr key={item._id} className="border-b border-white/10">
+                                                                    <td className="px-2 py-2.5">
+                                                                        <div className="font-semibold">{item.bugId?.name}</div>
                                                                         <div className="text-xs text-sec">{item.bugId?.bugId}</div>
                                                                     </td>
-                                                                    <td style={{ padding: '10px 8px' }}>{item.previousTeamName}</td>
-                                                                    <td style={{ padding: '10px 8px', textAlign: 'right' }} className="neon-green">₹{item.originalPrice?.toLocaleString()}</td>
-                                                                    <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                    <td className="px-2 py-2.5">{item.previousTeamName}</td>
+                                                                    <td className="neon-green px-2 py-2.5 text-right">₹{item.originalPrice?.toLocaleString()}</td>
+                                                                    <td className="px-2 py-2.5 text-center">
                                                                         <span className={`badge ${item.status === 'SOLD' ? 'badge-green' : item.status === 'AUCTIONING' ? 'badge-blue' : 'badge-amber'}`}>
                                                                             {item.status}
                                                                         </span>
                                                                     </td>
-                                                                    <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                    <td className="px-2 py-2.5 text-center">
                                                                         {item.status === 'WAITING' && rebidStatus === 'AUCTION' && (
                                                                             <button
                                                                                 className="btn btn-blue btn-sm"
-                                                                                style={{ fontSize: '0.65rem' }}
                                                                                 onClick={() => handleStartRebidAuction(item._id)}
                                                                             >
                                                                                 🚀 AUCTION
@@ -684,7 +690,6 @@ export default function AdminDashboard() {
                                                                         {item.status === 'AUCTIONING' && (
                                                                             <button
                                                                                 className="btn btn-purple btn-sm"
-                                                                                style={{ fontSize: '0.65rem' }}
                                                                                 onClick={() => { setAllotModal({ ...item.bugId, type: "bug" }); setAllotPrice(item.bugId.marketValue); setAllotTeamId(teams[0]?._id || ""); }}
                                                                             >
                                                                                 🎯 ALLOT
@@ -703,62 +708,60 @@ export default function AdminDashboard() {
                             ) : (
                                 /* Submissions Tab */
                                 <>
-                                    <h3 className="orbitron mb-20" style={{ fontSize: '0.95rem' }}>TEAM SUBMISSIONS</h3>
+                                    <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-white">TEAM SUBMISSIONS</h3>
                                     {!selectedRoom ? (
-                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>Select a room first.</div>
+                                        <div className="p-6 text-center text-xs text-sec">Select a room first.</div>
                                     ) : submissions.length === 0 ? (
-                                        <div className="text-center" style={{ padding: '32px 16px' }}>
-                                            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📭</div>
-                                            <div className="text-sec" style={{ fontSize: '0.85rem' }}>No submissions yet.</div>
+                                        <div className="px-4 py-8 text-center">
+                                            <div className="mb-3 text-[2rem]">📭</div>
+                                            <div className="text-sec text-sm">No submissions yet.</div>
                                         </div>
                                     ) : (
-                                        <div style={{ overflowX: 'auto' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-collapse text-[0.8rem]">
                                                 <thead>
-                                                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                                        <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>TEAM</th>
-                                                        <th style={{ textAlign: 'left', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>BUG</th>
-                                                        <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>PAID</th>
-                                                        <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>CODE</th>
-                                                        <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>SCORE</th>
-                                                        <th style={{ textAlign: 'right', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>PROFIT</th>
-                                                        <th style={{ textAlign: 'center', padding: '10px 8px', color: 'var(--text-sec)', fontWeight: 500, letterSpacing: '1px', fontSize: '0.68rem' }}>ACTION</th>
+                                                    <tr className="border-b border-white/15">
+                                                        <th className="px-2 py-2.5 text-left text-[0.68rem] font-medium tracking-[1px] text-slate-300">TEAM</th>
+                                                        <th className="px-2 py-2.5 text-left text-[0.68rem] font-medium tracking-[1px] text-slate-300">BUG</th>
+                                                        <th className="px-2 py-2.5 text-right text-[0.68rem] font-medium tracking-[1px] text-slate-300">PAID</th>
+                                                        <th className="px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[1px] text-slate-300">CODE</th>
+                                                        <th className="px-2 py-2.5 text-right text-[0.68rem] font-medium tracking-[1px] text-slate-300">SCORE</th>
+                                                        <th className="px-2 py-2.5 text-right text-[0.68rem] font-medium tracking-[1px] text-slate-300">PROFIT</th>
+                                                        <th className="px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[1px] text-slate-300">ACTION</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {submissions.map((sub) => (
                                                         <>
-                                                            <tr key={sub._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                                                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{sub.teamName}</td>
-                                                                <td style={{ padding: '10px 8px' }}>
-                                                                    <div className="text-xs" style={{ fontWeight: 600 }}>{sub.bugTitle}</div>
+                                                            <tr key={sub._id} className="border-b border-white/10">
+                                                                <td className="px-2 py-2.5 font-semibold">{sub.teamName}</td>
+                                                                <td className="px-2 py-2.5">
+                                                                    <div className="text-xs font-semibold">{sub.bugTitle}</div>
                                                                     <div className="text-xs text-sec">{sub.bugId?.bugId}</div>
                                                                 </td>
-                                                                <td style={{ padding: '10px 8px', textAlign: 'right' }} className="neon-green">₹{sub.purchasePrice?.toLocaleString()}</td>
-                                                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                <td className="neon-green px-2 py-2.5 text-right">₹{sub.purchasePrice?.toLocaleString()}</td>
+                                                                <td className="px-2 py-2.5 text-center">
                                                                     <button
-                                                                        className="btn btn-sm"
-                                                                        style={{ fontSize: '0.65rem', padding: '4px 10px', background: expandedCode === sub._id ? 'rgba(0,242,255,0.15)' : 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' }}
+                                                                        className={`btn btn-sm ${expandedCode === sub._id ? 'btn-blue' : inactiveTabClass}`}
                                                                         onClick={() => setExpandedCode(expandedCode === sub._id ? null : sub._id)}
                                                                     >
                                                                         {expandedCode === sub._id ? '🔼 Hide' : '👁 View'}
                                                                     </button>
                                                                 </td>
-                                                                <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                                                <td className="px-2 py-2.5 text-right">
                                                                     {sub.status === "scored" ? (
                                                                         <span className="neon-purple">{sub.adminScore} pts</span>
                                                                     ) : (
                                                                         <input
                                                                             type="number"
-                                                                            className="input"
-                                                                            style={{ width: '80px', padding: '5px 8px', fontSize: '0.78rem', textAlign: 'right' }}
+                                                                            className="input w-20 px-2 py-1 text-right text-xs"
                                                                             placeholder="0"
                                                                             value={scoreInputs[sub._id] ?? ""}
                                                                             onChange={(e) => setScoreInputs((prev) => ({ ...prev, [sub._id]: e.target.value }))}
                                                                         />
                                                                     )}
                                                                 </td>
-                                                                <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                                                                <td className="px-2 py-2.5 text-right">
                                                                     {sub.status === "scored" ? (
                                                                         <span className={sub.profit >= 0 ? 'neon-green' : 'neon-amber'}>
                                                                             {sub.profit >= 0 ? '+' : ''}₹{sub.profit?.toLocaleString()}
@@ -767,13 +770,12 @@ export default function AdminDashboard() {
                                                                         <span className="text-sec">—</span>
                                                                     )}
                                                                 </td>
-                                                                <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                                                                <td className="px-2 py-2.5 text-center">
                                                                     {sub.status === "scored" ? (
-                                                                        <span className="badge badge-green" style={{ fontSize: '0.6rem' }}>✅ SCORED</span>
+                                                                        <span className="badge badge-green text-[0.6rem]">✅ SCORED</span>
                                                                     ) : (
                                                                         <button
                                                                             className="btn btn-green btn-sm"
-                                                                            style={{ fontSize: '0.65rem', padding: '5px 12px' }}
                                                                             onClick={() => handleScoreSubmit(sub._id)}
                                                                             disabled={!scoreInputs[sub._id]}
                                                                         >
@@ -785,21 +787,8 @@ export default function AdminDashboard() {
                                                             {/* Expanded code row */}
                                                             {expandedCode === sub._id && (
                                                                 <tr key={`code-${sub._id}`}>
-                                                                    <td colSpan={7} style={{ padding: '0 8px 12px 8px' }}>
-                                                                        <pre style={{
-                                                                            background: 'rgba(0,0,0,0.4)',
-                                                                            border: '1px solid rgba(0,242,255,0.2)',
-                                                                            borderRadius: '6px',
-                                                                            padding: '14px',
-                                                                            fontSize: '0.75rem',
-                                                                            fontFamily: 'monospace',
-                                                                            whiteSpace: 'pre-wrap',
-                                                                            wordBreak: 'break-all',
-                                                                            color: 'var(--neon-green)',
-                                                                            maxHeight: '220px',
-                                                                            overflowY: 'auto',
-                                                                            lineHeight: '1.5',
-                                                                        }}>
+                                                                    <td colSpan={7} className="px-2 pb-3">
+                                                                        <pre className="max-h-55 overflow-y-auto whitespace-pre-wrap break-all rounded-md border border-cyan-300/30 bg-black/40 p-3.5 font-mono text-xs leading-6 text-emerald-300">
                                                                             {sub.solutionCode || "No code submitted."}
                                                                         </pre>
                                                                     </td>
@@ -817,11 +806,11 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* RIGHT PANEL: Activity Feed */}
-                    <div className="panel">
-                        <div className="card" style={{ padding: '24px 22px' }}>
-                            <div className="panel-title">Live Feed</div>
-                            <h3 className="orbitron mb-20" style={{ fontSize: '0.9rem' }}>ACTIVITY LOG</h3>
-                            <div className="feed" style={{ maxHeight: '480px', overflowY: 'auto' }}>
+                    <div className="space-y-5">
+                        <div className="card px-6 py-6">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Live Feed</div>
+                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-white">ACTIVITY LOG</h3>
+                            <div className="feed max-h-120 overflow-y-auto">
                                 {feedLog.length === 0 ? (
                                     <div className="text-xs text-sec">Waiting for activity...</div>
                                 ) : (
@@ -837,26 +826,26 @@ export default function AdminDashboard() {
 
                         {/* Quick Stats */}
                         <div className="card">
-                            <div className="panel-title mb-16">Session Stats</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>ROOMS</span>
+                            <div className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Session Stats</div>
+                            <div className="flex flex-col gap-3.5">
+                                <div className="flex items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3.5 py-3">
+                                    <span className="text-xs uppercase tracking-[1.5px] text-sec">ROOMS</span>
                                     <span className="orbitron neon-green">{rooms.length}</span>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>TEAMS</span>
+                                <div className="flex items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3.5 py-3">
+                                    <span className="text-xs uppercase tracking-[1.5px] text-sec">TEAMS</span>
                                     <span className="orbitron neon-purple">{teams.length}</span>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>BUGS</span>
+                                <div className="flex items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3.5 py-3">
+                                    <span className="text-xs uppercase tracking-[1.5px] text-sec">BUGS</span>
                                     <span className="orbitron neon-blue">{bugs.length}</span>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>POWER CARDS</span>
+                                <div className="flex items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3.5 py-3">
+                                    <span className="text-xs uppercase tracking-[1.5px] text-sec">POWER CARDS</span>
                                     <span className="orbitron neon-green">{powerCards.length}</span>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>SUBMISSIONS</span>
+                                <div className="flex items-center justify-between rounded-lg border border-white/15 bg-white/5 px-3.5 py-3">
+                                    <span className="text-xs uppercase tracking-[1.5px] text-sec">SUBMISSIONS</span>
                                     <span className="orbitron neon-amber">{submissions.length}</span>
                                 </div>
                             </div>
@@ -871,9 +860,9 @@ export default function AdminDashboard() {
                     <div className="modal-overlay active">
                         <div className="modal-box">
                             <h3 className="orbitron neon-purple">{allotModal.type === "powercard" ? "ALLOT POWER CARD TO TEAM" : "ALLOT BUG TO TEAM"}</h3>
-                            <div className="bug-card" style={{ marginBottom: '20px' }}>
-                                <div className="bug-card-id">{allotModal.type === "powercard" ? allotModal.cardId : allotModal.bugId} {allotModal.tag}</div>
-                                <div className="bug-card-name">{allotModal.name}</div>
+                            <div className="mb-5 rounded-xl border border-white/25 bg-black/35 p-4">
+                                <div className="text-xs uppercase tracking-widest text-slate-400">{allotModal.type === "powercard" ? allotModal.cardId : allotModal.bugId} {allotModal.tag}</div>
+                                <div className="mt-1 text-xl font-bold text-white">{allotModal.name}</div>
                             </div>
                             <div className="input-group">
                                 <label className="input-label">Select Team</label>
@@ -897,11 +886,12 @@ export default function AdminDashboard() {
             }
 
             {/* Bug Details Modal */}
-            <BugDetailsModal
-                bug={viewingBug}
-                onClose={() => setViewingBug(null)}
-                full={auctionPhase === "ENDED"}
-            />
-        </>
+                <BugDetailsModal
+                    bug={viewingBug}
+                    onClose={() => setViewingBug(null)}
+                    full={auctionPhase === "ENDED"}
+                />
+            </div>
+        </div>
     );
 }
