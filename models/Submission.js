@@ -46,6 +46,15 @@ const SubmissionSchema = new mongoose.Schema(
             enum: ["pending", "scored"],
             default: "pending",
         },
+        geminiResult: {
+            type: String,
+            enum: ["waiting", "yes", "no"],
+            default: "waiting",
+        },
+        geminiAnalysis: {
+            type: String,
+            default: "",
+        },
     },
     { timestamps: true }
 );

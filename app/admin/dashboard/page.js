@@ -799,6 +799,7 @@ export default function AdminDashboard() {
                                                         <th className="px-2 py-2.5 text-right text-[0.68rem] font-medium tracking-[1px] text-slate-300">PAID</th>
                                                         <th className="px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[1px] text-slate-300">CODE</th>
                                                         <th className="px-2 py-2.5 text-right text-[0.68rem] font-medium tracking-[1px] text-slate-300">SCORE</th>
+                                                        <th className="px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[1px] text-slate-300">GEMINI</th>
                                                         <th className="px-2 py-2.5 text-right text-[0.68rem] font-medium tracking-[1px] text-slate-300">PROFIT</th>
                                                         <th className="px-2 py-2.5 text-center text-[0.68rem] font-medium tracking-[1px] text-slate-300">ACTION</th>
                                                     </tr>
@@ -833,6 +834,18 @@ export default function AdminDashboard() {
                                                                             onChange={(e) => setScoreInputs((prev) => ({ ...prev, [sub._id]: e.target.value }))}
                                                                         />
                                                                     )}
+                                                                </td>
+                                                                <td className="px-2 py-2.5 text-center">
+                                                                    <span 
+                                                                        className={`badge text-[0.65rem] ${
+                                                                            sub.geminiResult === 'yes' ? 'badge-green' : 
+                                                                            sub.geminiResult === 'no' ? 'badge-amber' : 
+                                                                            'badge-gray'
+                                                                        }`}
+                                                                        title={sub.geminiAnalysis}
+                                                                    >
+                                                                        {sub.geminiResult?.toUpperCase() || "WAITING"}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="px-2 py-2.5 text-right">
                                                                     {sub.status === "scored" ? (

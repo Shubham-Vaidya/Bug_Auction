@@ -92,7 +92,7 @@ export default function TeamPage({ params }) {
 
     // Fetch team submissions when room is ENDED
     useEffect(() => {
-        if (!user || !room || room.status !== "ENDED") return;
+        if (!user || !room) return;
 
         const fetchSubmissions = async () => {
             try {
@@ -434,50 +434,48 @@ export default function TeamPage({ params }) {
                                                     )}
                                                 </div>
 
-                                                {isEnded && (
-                                                    <div className="mt-3 border-t border-white/20 pt-3" onClick={(e) => e.stopPropagation()}>
-                                                        {!submissionEntry ? (
+                                                <div className="mt-3 border-t border-white/20 pt-3" onClick={(e) => e.stopPropagation()}>
+                                                    {!submissionEntry ? (
+                                                        <button
+                                                            className="w-full rounded-full border border-sky-300/50 bg-sky-400/20 px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.05em] text-sky-100 transition hover:bg-sky-400/30"
+                                                            onClick={() => {
+                                                                setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
+                                                                setSolutionCode("");
+                                                                setSubmitMsg("");
+                                                            }}
+                                                        >
+                                                            📤 SUBMIT SOLUTION
+                                                        </button>
+                                                    ) : submissionEntry.status === "pending" ? (
+                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                            <span className="rounded-full border border-amber-300/60 bg-amber-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-amber-100">⏳ SUBMITTED — AWAITING SCORE</span>
                                                             <button
-                                                                className="w-full rounded-full border border-sky-300/50 bg-sky-400/20 px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.05em] text-sky-100 transition hover:bg-sky-400/30"
+                                                                className="rounded-full border border-sky-300/50 bg-sky-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-sky-100 transition hover:bg-sky-400/30"
                                                                 onClick={() => {
                                                                     setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
-                                                                    setSolutionCode("");
+                                                                    setSolutionCode(submissionEntry.solutionCode || "");
                                                                     setSubmitMsg("");
                                                                 }}
                                                             >
-                                                                📤 SUBMIT SOLUTION
+                                                                ✏️ Edit
                                                             </button>
-                                                        ) : submissionEntry.status === "pending" ? (
-                                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                                                <span className="rounded-full border border-amber-300/60 bg-amber-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-amber-100">⏳ SUBMITTED — AWAITING SCORE</span>
-                                                                <button
-                                                                    className="rounded-full border border-sky-300/50 bg-sky-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-sky-100 transition hover:bg-sky-400/30"
-                                                                    onClick={() => {
-                                                                        setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
-                                                                        setSolutionCode(submissionEntry.solutionCode || "");
-                                                                        setSubmitMsg("");
-                                                                    }}
-                                                                >
-                                                                    ✏️ Edit
-                                                                </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="uppercase tracking-[0.05em] text-slate-300">Admin Score</span>
+                                                                <span className="font-semibold text-fuchsia-300">{submissionEntry.adminScore} pts</span>
                                                             </div>
-                                                        ) : (
-                                                            <div className="space-y-2">
-                                                                <div className="flex items-center justify-between text-sm">
-                                                                    <span className="uppercase tracking-[0.05em] text-slate-300">Admin Score</span>
-                                                                    <span className="font-semibold text-fuchsia-300">{submissionEntry.adminScore} pts</span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between text-sm">
-                                                                    <span className="uppercase tracking-[0.05em] text-slate-300">Profit</span>
-                                                                    <span className={`font-semibold ${submissionEntry.profit >= 0 ? "text-emerald-300" : "text-amber-300"}`}>
-                                                                        {submissionEntry.profit >= 0 ? "+" : ""}₹{submissionEntry.profit?.toLocaleString()}
-                                                                    </span>
-                                                                </div>
-                                                                <span className="inline-flex rounded-full border border-emerald-300/60 bg-emerald-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-emerald-100">✅ SCORED</span>
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="uppercase tracking-[0.05em] text-slate-300">Profit</span>
+                                                                <span className={`font-semibold ${submissionEntry.profit >= 0 ? "text-emerald-300" : "text-amber-300"}`}>
+                                                                    {submissionEntry.profit >= 0 ? "+" : ""}₹{submissionEntry.profit?.toLocaleString()}
+                                                                </span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                            <span className="inline-flex rounded-full border border-emerald-300/60 bg-emerald-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-emerald-100">✅ SCORED</span>
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                 {room?.rebiddingStatus === "ACCEPTING" && !submissionEntry && (
                                                     <div className="mt-3 border-t border-white/20 pt-3">
