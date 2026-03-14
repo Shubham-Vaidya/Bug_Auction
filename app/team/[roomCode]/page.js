@@ -51,6 +51,8 @@ export default function TeamPage({ params }) {
     const [submitting, setSubmitting] = useState(false);
     const [submitMsg, setSubmitMsg] = useState("");
     const [viewingBug, setViewingBug] = useState(null);
+    const [openCodeBugId, setOpenCodeBugId] = useState(null);
+    const [selectedCodeLangByBug, setSelectedCodeLangByBug] = useState({});
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -69,11 +71,11 @@ export default function TeamPage({ params }) {
                 if (roomData.success) setRoom(roomData.room);
 
                 // Fetch teams
-                const teamsRes = await fetch(`/api/rooms/${roomCode}/teams`);
+                const teamsRes = await fetch(`/api/rooms/${roomCode}/teams?userId=${user._id}`);
                 const teamsData = await teamsRes.json();
                 if (teamsData.success) {
                     setAllTeams(teamsData.teams);
-                    const me = teamsData.teams.find((t) => t.odid === user._id);
+                    const me = teamsData.teams.find((t) => String(t.odid) === String(user._id));
                     if (me) setMyData(me);
                 }
                 setLoading(false);
@@ -99,8 +101,8 @@ export default function TeamPage({ params }) {
                 if (data.success) {
                     const map = {};
                     data.submissions.forEach((s) => {
-                        // Key by the bug's string bugId (e.g. "BUG-001")
-                        map[s.bugId?.bugId || s.bugTitle] = s;
+                        // Key by the bug's string bugId (e.g. "BUG-001") or name
+                        map[s.bugId?.bugId || s.bugId?.name || s.bugTitle] = s;
                     });
                     setSubmissions(map);
                 }
@@ -138,7 +140,7 @@ export default function TeamPage({ params }) {
                 const d = await r.json();
                 if (d.success) {
                     const map = {};
-                    d.submissions.forEach((s) => { map[s.bugId?.bugId || s.bugTitle] = s; });
+                    d.submissions.forEach((s) => { map[s.bugId?.bugId || s.bugId?.name || s.bugTitle] = s; });
                     setSubmissions(map);
                 }
                 setTimeout(() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }, 1500);
@@ -192,18 +194,22 @@ export default function TeamPage({ params }) {
     const isEnded = room?.status === "ENDED";
 
     return (
-        <div className="relative min-h-screen overflow-hidden text-white">
-            <Image src="/TeamBackground.png" alt="Team arena background" fill className="object-cover" priority />
-            <div className="absolute inset-0 bg-black/60" />
+        <div className="relative min-h-screen text-white">
+            <div className="fixed inset-0 z-0 h-screen overflow-hidden">
+                <div className="relative h-full w-full">
+                    <Image src="/TeamBackground.png" alt="Team arena background" fill className="object-cover" priority />
+                    <div className="absolute inset-0 bg-black/60" />
 
-            <Image
-                src="/Character2.png"
-                alt="Character"
-                width={300}
-                height={460}
-                className="pointer-events-none  absolute bottom-1 right-0 z-10 hidden w-48 select-none drop-shadow-2xl md:block lg:w-56 xl:w-72"
-                priority
-            />
+                    <Image
+                        src="/Character2.png"
+                        alt="Character"
+                        width={300}
+                        height={460}
+                        className="pointer-events-none absolute right-0 bottom-1 z-10 hidden w-48 select-none drop-shadow-2xl md:block lg:w-56 xl:w-72"
+                        priority
+                    />
+                </div>
+            </div>
 
             <div className="relative z-20 mx-auto w-screen px-4 py-4 sm:px-6 lg:pr-64 lg:pl-8 xl:pr-80">
                 <div className="mb-6 rounded-2xl border border-white/20 bg-black/40 px-4 py-5 backdrop-blur-md sm:px-6">
@@ -242,7 +248,7 @@ export default function TeamPage({ params }) {
 
                 {myData && (
                     <div className="mb-6 inline-flex items-center gap-4 rounded-2xl border border-emerald-300/40 bg-black/40 px-6 py-5 backdrop-blur-md">
-                        <Image src="/currency.png" alt="Currency" width={40} height={40} className="h-9 w-9 object-contain" />
+                        <Image src="/currency.png" alt="Currency" width={80} height={80} className="h-20 w-20 object-contain" />
                         <div>
                             <div className="text-sm uppercase tracking-[0.06em] text-slate-300">Wallet Balance</div>
                             <div className="text-4xl font-semibold leading-none text-emerald-300 sm:text-5xl">₹{myData.coins?.toLocaleString()}</div>
@@ -261,7 +267,7 @@ export default function TeamPage({ params }) {
                                 return (
                                     <div
                                         className="cursor-pointer rounded-xl border border-sky-300/40 bg-sky-400/10 p-3 sm:p-4"
-                                        onClick={() => setViewingBug(ab)}
+                                        onClick={() => setViewingBug({ ...ab, showFull: false })}
                                     >
                                         <div className="text-xs uppercase tracking-widest text-slate-500">BUG ID: {ab.bugId} {ab.tag}</div>
                                         <div className="mt-1 text-xl font-bold text-white">{ab.name}</div>
@@ -336,7 +342,7 @@ export default function TeamPage({ params }) {
 
                         <div className={panelCardClass}>
                             <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-fuchsia-300/50">Your Portfolio</div>
-                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-fuchsia-300 sm:text-3xl">BUGS ACQUIRED</h3>
+                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-fuchsia-300 sm:text-3xl">MY TEAM PORTFOLIO</h3>
 
                             {!myData || myData.purchases?.length === 0 ? (
                                 <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-10 text-center">
@@ -347,12 +353,16 @@ export default function TeamPage({ params }) {
                                 <div className="space-y-3">
                                     {myData.purchases?.map((p, i) => {
                                         const submissionEntry = submissions[p.bugId];
+                                        const codeLanguages = Object.keys(p.languageVersions || {});
+                                        const selectedCodeLanguage = selectedCodeLangByBug[p.bugId] || codeLanguages[0];
+                                        const selectedBuggyCode = selectedCodeLanguage ? p.languageVersions?.[selectedCodeLanguage] : "";
+                                        const isCodeOpen = openCodeBugId === p.bugId;
 
                                         return (
                                             <div
                                                 key={i}
                                                 className="cursor-pointer rounded-xl border border-white/25 bg-black/35 p-3 sm:p-4"
-                                                onClick={() => setViewingBug(p)}
+                                                onClick={() => setViewingBug({ ...p, showFull: true })}
                                             >
                                                 <div className="text-xs uppercase tracking-widest text-slate-500">{p.bugId} {p.tag}</div>
                                                 <div className="mt-1 text-xl font-bold text-white">{p.bugName}</div>
@@ -372,6 +382,56 @@ export default function TeamPage({ params }) {
                                                         <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Difficulty</div>
                                                         <div className={`text-lg font-semibold ${difficultyTextClass[p.difficulty] || "text-emerald-300"}`}>{p.difficulty}</div>
                                                     </div>
+                                                </div>
+
+                                                <div className="mt-3 border-t border-white/20 pt-3" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        className="w-full rounded-full border border-fuchsia-300/50 bg-fuchsia-400/15 px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.05em] text-fuchsia-100 transition hover:bg-fuchsia-400/30"
+                                                        onClick={() => {
+                                                            if (isCodeOpen) {
+                                                                setOpenCodeBugId(null);
+                                                                return;
+                                                            }
+                                                            if (codeLanguages.length > 0) {
+                                                                setOpenCodeBugId(p.bugId);
+                                                                setSelectedCodeLangByBug((prev) => ({
+                                                                    ...prev,
+                                                                    [p.bugId]: prev[p.bugId] || codeLanguages[0],
+                                                                }));
+                                                            }
+                                                        }}
+                                                        disabled={codeLanguages.length === 0}
+                                                    >
+                                                        {codeLanguages.length === 0
+                                                            ? "⛔ BUGGY CODE NOT AVAILABLE"
+                                                            : isCodeOpen
+                                                                ? "🔽 HIDE BUGGY CODE"
+                                                                : "🔓 VIEW BUGGY CODE"}
+                                                    </button>
+
+                                                    {isCodeOpen && codeLanguages.length > 0 && (
+                                                        <div className="mt-3 rounded-xl border border-white/20 bg-black/30 p-3">
+                                                            <div className="mb-2 flex flex-wrap gap-2">
+                                                                {codeLanguages.map((lang) => (
+                                                                    <button
+                                                                        key={lang}
+                                                                        type="button"
+                                                                        className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.05em] ${selectedCodeLanguage === lang
+                                                                            ? "border-emerald-300/60 bg-emerald-400/20 text-emerald-100"
+                                                                            : "border-white/25 bg-white/5 text-slate-200"
+                                                                            }`}
+                                                                        onClick={() => setSelectedCodeLangByBug((prev) => ({ ...prev, [p.bugId]: lang }))}
+                                                                    >
+                                                                        {lang}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                            <pre className="max-h-80 overflow-auto rounded-lg border border-emerald-300/30 bg-black/60 p-3 text-xs leading-relaxed text-emerald-200">
+                                                                {selectedBuggyCode}
+                                                            </pre>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {isEnded && (
@@ -436,6 +496,7 @@ export default function TeamPage({ params }) {
                             )}
                         </div>
 
+
                         <div className={panelCardClass}>
                             <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-emerald-300/50">Your Power Cards</div>
                             <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-emerald-300 sm:text-3xl">POWER PORTFOLIO</h3>
@@ -474,7 +535,7 @@ export default function TeamPage({ params }) {
                             <div className="mb-4 border-b border-white/20 pb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Live Rankings</div>
                             <div className="space-y-2.5">
                                 {leaderboard.map((t, i) => {
-                                    const isMe = t.odid === user?._id;
+                                    const isMe = String(t.odid) === String(user?._id);
                                     const rankEmoji = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
                                     return (
                                         <div
@@ -573,7 +634,7 @@ export default function TeamPage({ params }) {
             <BugDetailsModal
                 bug={viewingBug}
                 onClose={() => setViewingBug(null)}
-                full={isEnded && myData?.purchases?.some((p) => p.bugId === viewingBug?.bugId || p.bugName === viewingBug?.name)}
+                full={Boolean(viewingBug?.showFull)}
             />
         </div>
     );

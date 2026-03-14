@@ -50,18 +50,46 @@ export async function POST(request, { params }) {
             }, { status: 400 });
         }
 
-        // Deduct coins and create purchase
-        player.coins -= allotPrice;
-        player.bugsWon += 1;
-        await player.save();
+        // Atomically deduct coins so repeated requests cannot overspend.
+        const updatedPlayer = await RoomPlayer.findOneAndUpdate(
+            { _id: player._id, coins: { $gte: allotPrice } },
+            { $inc: { coins: -allotPrice, bugsWon: 1 } },
+            { new: true }
+        );
 
-        const purchase = await Purchase.create({
-            userId: player.userId,
-            roomId: room._id,
-            bugId: bug._id,
-            purchasePrice: allotPrice,
-            teamName: player.teamName,
-        });
+        if (!updatedPlayer) {
+            return NextResponse.json({
+                error: `Not enough coins. Team has ₹${player.coins}, needs ₹${allotPrice}`,
+            }, { status: 400 });
+        }
+
+        let purchase;
+        try {
+            purchase = await Purchase.create({
+                userId: updatedPlayer.userId,
+                roomId: room._id,
+                bugId: bug._id,
+                purchasePrice: allotPrice,
+                teamName: updatedPlayer.teamName,
+            });
+        } catch (createErr) {
+            // Duplicate-key means another request allotted this bug first.
+            if (createErr?.code === 11000) {
+                await RoomPlayer.findByIdAndUpdate(updatedPlayer._id, {
+                    $inc: { coins: allotPrice, bugsWon: -1 },
+                });
+
+                return NextResponse.json({
+                    error: `Bug ${bug.bugId} already allotted to another team`,
+                }, { status: 400 });
+            }
+
+            // Roll back player state for unexpected purchase failures.
+            await RoomPlayer.findByIdAndUpdate(updatedPlayer._id, {
+                $inc: { coins: allotPrice, bugsWon: -1 },
+            });
+            throw createErr;
+        }
 
         // If it was a rebid bug, mark it as SOLD
         await Rebid.findOneAndUpdate(
@@ -75,9 +103,9 @@ export async function POST(request, { params }) {
             purchase: {
                 bugId: bug.bugId,
                 bugName: bug.name,
-                teamName: player.teamName,
+                teamName: updatedPlayer.teamName,
                 price: allotPrice,
-                remainingCoins: player.coins,
+                remainingCoins: updatedPlayer.coins,
             },
         });
     } catch (error) {

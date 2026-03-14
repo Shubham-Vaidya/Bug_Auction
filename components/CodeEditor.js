@@ -123,7 +123,7 @@ export default function CodeEditor({ code, onChange, language, onLanguageChange,
                     width: 50px;
                     background: #15152a;
                     color: rgba(255, 255, 255, 0.3);
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-code);
                     font-size: 0.82rem;
                     text-align: right;
                     padding: 16px 12px;
@@ -142,7 +142,7 @@ export default function CodeEditor({ code, onChange, language, onLanguageChange,
                     color: #e0e0ff;
                     border: none;
                     padding: 16px;
-                    font-family: 'Space Mono', monospace;
+                    font-family: var(--font-code);
                     font-size: 0.82rem;
                     line-height: 1.5;
                     resize: none;

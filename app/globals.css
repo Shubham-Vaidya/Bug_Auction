@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 /* =====================================================
    BUG AUCTION ARENA -- Premium Dark Cyberpunk Theme v3
@@ -8,6 +8,7 @@
 /* Design Tokens */
 :root {
     --font-main: var(--font-bebas), 'Bebas Neue', sans-serif;
+    --font-code: var(--font-mono), 'Space Mono', monospace;
     --bg-dark: #08081a;
     --bg-mid: #101025;
     --bg-card: rgba(35, 35, 75, 1);
@@ -81,7 +82,15 @@ h4,
 
 
 .mono {
-    font-family: var(--font-main);
+    font-family: var(--font-code) !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+pre, code, kbd, samp {
+    font-family: var(--font-code) !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
 }
 
 /* ΓöÇΓöÇ Animated Background ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */

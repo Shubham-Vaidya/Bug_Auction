@@ -1,163 +1,262 @@
 [
     {
-        "bugId": "BUG-101",
-        "name": "Auth Bypass Exploit",
-        "description": "PREVIEW: A critical authentication bypass vulnerability that allows unauthorized access to admin endpoints. Can you identify the token validation flaw?\nFULL: The auth.js middleware fails to verify the 'exp' (expiration) claim on incoming JWTs, allowing expired tokens to be reused indefinitely for admin access.",
-        "marketValue": 2000,
-        "difficulty": "Expert",
-        "tag": "💀",
-        "languageVersions": {
-            "JavaScript": "Fix the JWT validation middleware in auth.js",
-            "Python": "Fix the JWT validation decorator in auth.py",
-            "C++": "Fix the token parser in auth_handler.cpp",
-            "Java": "Fix the AuthFilter class in AuthFilter.java",
-            "C": "Fix the token validation in auth.c"
-        }
-    },
-    {
-        "bugId": "BUG-202",
-        "name": "Race Condition in Scheduler",
-        "description": "PREVIEW: A race condition in the task scheduler causes duplicate job execution under high concurrency. Locate the missing mutex.\nFULL: The task scheduling loop concurrently reads and writes the 'active_task' counter without a global lock, leading to multiple threads picking up the same job ID during high-load bursts.",
-        "marketValue": 1500,
-        "difficulty": "Hard",
-        "tag": "🔴",
-        "languageVersions": {
-            "JavaScript": "Fix the async scheduler in scheduler.js",
-            "Python": "Fix the threading issue in scheduler.py",
-            "C++": "Fix the mutex lock in scheduler.cpp",
-            "Java": "Fix the synchronized block in Scheduler.java",
-            "C": "Fix the pthread mutex in scheduler.c"
-        }
-    },
-    {
-        "bugId": "BUG-303",
-        "name": "Null Pointer Dereference",
-        "description": "PREVIEW: Accessing an uninitialized pointer in the data processing pipeline causes segmentation faults. Find the missing null check.\nFULL: The processing function in storage.c assumes the database handle is always connected, dereferencing 'db_ptr' even when a connection failure has occurred, leading to a SIGSEGV.",
-        "marketValue": 600,
+        "bugId": "BUG-001",
+        "name": "Max Element Logic",
+        "description": "PREVIEW: Maximum element nikalne wali logic wrong result de rahi hai.\nFULL: Loop/condition bug ki wajah se last ya highest value correctly track nahi ho rahi.",
+        "marketValue": 400,
         "difficulty": "Easy",
         "tag": "🟢",
         "languageVersions": {
-            "JavaScript": "Fix the null check in processor.js",
-            "Python": "Fix the None check in processor.py",
-            "C++": "Fix the nullptr check in processor.cpp",
-            "Java": "Fix the NullPointerException in Processor.java",
-            "C": "Fix the NULL check in processor.c"
+            "Python": "def max_element(arr):\n    max_val = arr[0]\n    for i in range(1, len(arr) + 1):\n        if arr[i] < max_val:\n            max_val = arr[i]\n    return max_val\n\nprint(max_element([3, 9, 2, 11, 5]))",
+            "Java": "function maxElement(arr) {\n  let max = arr[0];\n  for (let i = 1; i <= arr.length; i++) {\n    if (arr[i] < max) {\n      max = arr[i];\n    }\n  }\n  return max;\n}\n\nconsole.log(maxElement([3, 9, 2, 11, 5]));",
+            "C": "function maxElement(arr) {\n  let max = arr[0];\n  for (let i = 1; i <= arr.length; i++) {\n    if (arr[i] < max) {\n      max = arr[i];\n    }\n  }\n  return max;\n}\n\nconsole.log(maxElement([3, 9, 2, 11, 5]));"
         }
     },
     {
-        "bugId": "BUG-404",
-        "name": "Memory Leak in Galaxy Filter",
-        "description": "PREVIEW: The galaxy filter module leaks memory on each render cycle due to unreleased texture buffers. Identify the resource leak.\nFULL: The WebGL context in galaxyFilter.js allocates a new buffer for every frame without calling gl.deleteBuffer(), eventually exhausting GPU memory and causing an Out-of-Memory crash.",
-        "marketValue": 1200,
-        "difficulty": "Hard",
-        "tag": "🔴",
-        "languageVersions": {
-            "JavaScript": "Fix the buffer cleanup in galaxyFilter.js",
-            "Python": "Fix the memory management in galaxy_filter.py",
-            "C++": "Fix the destructor in GalaxyFilter.cpp",
-            "Java": "Fix the resource cleanup in GalaxyFilter.java",
-            "C": "Fix the free() calls in galaxy_filter.c"
-        }
-    },
-    {
-        "bugId": "BUG-500",
-        "name": "Database Recursive Loop",
-        "description": "PREVIEW: A self-referencing foreign key creates an infinite recursive query loop when fetching nested comments. Find the loop condition.\nFULL: The GET /comments endpoint lacks a recursion depth limit for the parent_id self-join, causing the application to hang when processing circular comment references.",
-        "marketValue": 800,
-        "difficulty": "Medium",
-        "tag": "🟡",
-        "languageVersions": {
-            "JavaScript": "Fix the recursive query in comments.js",
-            "Python": "Fix the recursive ORM query in comments.py",
-            "C++": "Fix the recursive SQL builder in comments.cpp",
-            "Java": "Fix the recursive JPA query in CommentDAO.java",
-            "C": "Fix the recursive query in comments.c"
-        }
-    },
-    {
-        "bugId": "BUG-601",
-        "name": "XSS in Search Input",
-        "description": "PREVIEW: The search bar does not sanitize user input, allowing script injection via crafted search queries. Find the reflected sink.\nFULL: Search queries are directly injected into the DOM via innerHTML in search_results.js without escaping, allowing reflected XSS attacks like ?q=<script>alert(1)</script>.",
-        "marketValue": 900,
-        "difficulty": "Medium",
-        "tag": "🟡",
-        "languageVersions": {
-            "JavaScript": "Fix the input sanitization in search.js",
-            "Python": "Fix the template escaping in search.py",
-            "C++": "Fix the HTML encoder in search_handler.cpp",
-            "Java": "Fix the XSS filter in SearchServlet.java",
-            "C": "Fix the HTML escape in search.c"
-        }
-    },
-    {
-        "bugId": "BUG-702",
-        "name": "Integer Overflow in Calculator",
-        "description": "PREVIEW: Large number multiplication causes integer overflow leading to incorrect financial calculations. Find the arithmetic error.\nFULL: The billing calculation uses a standard 32-bit signed integer for total_cents, which overflows when calculating invoices over ₹21 million, resulting in negative invoice amounts.",
-        "marketValue": 1100,
-        "difficulty": "Medium",
-        "tag": "🟡",
-        "languageVersions": {
-            "JavaScript": "Fix the overflow in calculator.js using BigInt",
-            "Python": "Fix the precision in calculator.py",
-            "C++": "Fix the overflow in calculator.cpp",
-            "Java": "Fix using BigInteger in Calculator.java",
-            "C": "Fix the overflow check in calculator.c"
-        }
-    },
-    {
-        "bugId": "BUG-803",
-        "name": "Deadlock in Connection Pool",
-        "description": "PREVIEW: Two threads acquiring connections in opposite order cause a deadlock under peak traffic. Locate the locking conflict.\nFULL: The DataLogger and UserSync classes acquire DB locks in reverse alphabetical order, causing a deadlock whenever both processes attempt to run simultaneously during a sync cycle.",
-        "marketValue": 1800,
-        "difficulty": "Expert",
-        "tag": "💀",
-        "languageVersions": {
-            "JavaScript": "Fix the async pool manager in pool.js",
-            "Python": "Fix the connection pool in pool.py",
-            "C++": "Fix the lock ordering in ConnectionPool.cpp",
-            "Java": "Fix the ReentrantLock in ConnectionPool.java",
-            "C": "Fix the semaphore in connection_pool.c"
-        }
-    },
-    {
-        "bugId": "BUG-904",
-        "name": "Cache Invalidation Bug",
-        "description": "PREVIEW: Stale cache entries persist after data updates, causing users to see outdated information. Find the broken TTL logic.\nFULL: The Redis cache invalidation logic fails to delete keys when a partial UPDATE occurs in the database, relying on a fixed 24-hour expiration that is too long for volatile user data.",
-        "marketValue": 700,
+        "bugId": "BUG-002",
+        "name": "Average Precision",
+        "description": "PREVIEW: Average calculation mein precision loss ho raha hai.\nFULL: Integer division ya wrong type cast ki wajah se decimal part truncate ho raha hai.",
+        "marketValue": 380,
         "difficulty": "Easy",
         "tag": "🟢",
         "languageVersions": {
-            "JavaScript": "Fix the cache invalidation in cache.js",
-            "Python": "Fix the cache decorator in cache.py",
-            "C++": "Fix the cache map in CacheManager.cpp",
-            "Java": "Fix the @Cacheable in CacheService.java",
-            "C": "Fix the hash map cache in cache.c"
+            "Python": "def average(nums):\n    total = sum(nums)\n    return total // len(nums)\n\nprint(average([1, 2, 2]))",
+            "Java": "function average(nums) {\n  let sum = 0;\n  for (const n of nums) sum += n;\n  return Math.floor(sum / nums.length);\n}\n\nconsole.log(average([1, 2, 2]));",
+            "C": "function average(nums) {\n  let sum = 0;\n  for (const n of nums) sum += n;\n  return Math.floor(sum / nums.length);\n}\n\nconsole.log(average([1, 2, 2]));"
+        }
+    },
+    {
+        "bugId": "BUG-003",
+        "name": "Prime Edge Case",
+        "description": "PREVIEW: Prime check small inputs par fail kar raha hai.\nFULL: 0, 1, 2 ya boundary conditions ke liye proper validation missing hai.",
+        "marketValue": 420,
+        "difficulty": "Easy",
+        "tag": "🟢",
+        "languageVersions": {
+            "Python": "def is_prime(n):\n    if n <= 2:\n        return True\n    for i in range(2, n):\n        if n % i == 0:\n            return False\n    return True\n\nprint(is_prime(1))",
+            "Java": "function isPrime(n) {\n  if (n <= 2) return true;\n  for (let i = 2; i < n; i++) {\n    if (n % i === 0) return false;\n  }\n  return true;\n}\n\nconsole.log(isPrime(1));",
+            "C": "function isPrime(n) {\n  if (n <= 2) return true;\n  for (let i = 2; i < n; i++) {\n    if (n % i === 0) return false;\n  }\n  return true;\n}\n\nconsole.log(isPrime(1));"
+        }
+    },
+    {
+        "bugId": "BUG-004",
+        "name": "Reverse String",
+        "description": "PREVIEW: String reverse output expected format se mismatch hai.\nFULL: Index boundaries ya mutation approach wrong use ho raha hai reverse routine mein.",
+        "marketValue": 390,
+        "difficulty": "Easy",
+        "tag": "🟢",
+        "languageVersions": {
+            "Python": "def reverse_string(s):\n    out = \"\"\n    for i in range(len(s) + 1):\n        out += s[i]\n    return out[::-1:]\n\nprint(reverse_string(\"arena\"))",
+            "Java": "function reverseString(s) {\n  let out = \"\";\n  for (let i = 0; i <= s.length; i++) {\n    out += s[i];\n  }\n  return out.split(\"\").reverse;\n}\n\nconsole.log(reverseString(\"arena\"));",
+            "C": "function reverseString(s) {\n  let out = \"\";\n  for (let i = 0; i <= s.length; i++) {\n    out += s[i];\n  }\n  return out.split(\"\").reverse;\n}\n\nconsole.log(reverseString(\"arena\"));"
+        }
+    },
+    {
+        "bugId": "BUG-005",
+        "name": "Array Sum Overflow",
+        "description": "PREVIEW: Large array sum incorrect aa raha hai.\nFULL: Sum operation fixed-width integer limit cross kar raha hai aur overflow trigger ho raha hai.",
+        "marketValue": 430,
+        "difficulty": "Easy",
+        "tag": "🟢",
+        "languageVersions": {
+            "Python": "import numpy as np\n\ndef total(arr):\n    s = np.int32(0)\n    for n in arr:\n        s = np.int32(s + n)\n    return s\n\nprint(total([2147483647, 10, 20]))",
+            "Java": "function total(arr) {\n  let sum = 0;\n  for (const n of arr) {\n    sum = (sum + n) | 0;\n  }\n  return sum;\n}\n\nconsole.log(total([2147483647, 10, 20]));",
+            "C": "function total(arr) {\n  let sum = 0;\n  for (const n of arr) {\n    sum = (sum + n) | 0;\n  }\n  return sum;\n}\n\nconsole.log(total([2147483647, 10, 20]));"
+        }
+    },
+    {
+        "bugId": "BUG-006",
+        "name": "Palindrome Pointer",
+        "description": "PREVIEW: Two-pointer palindrome checker kuch cases miss kar raha hai.\nFULL: Left/right pointer update ya loop condition incorrect hai, jis se false negatives aa rahe hain.",
+        "marketValue": 300,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "def is_palindrome(s):\n    l, r = 0, len(s) - 1\n    while l < r:\n        if s[l] != s[r]:\n            return False\n        l += 1\n        r -= 2\n    return True\n\nprint(is_palindrome(\"racecar\"))",
+            "Java": "function isPalindrome(s) {\n  let l = 0, r = s.length - 1;\n  while (l < r) {\n    if (s[l] !== s[r]) return false;\n    l++;\n    r -= 2;\n  }\n  return true;\n}\n\nconsole.log(isPalindrome(\"racecar\"));",
+            "C": "function isPalindrome(s) {\n  let l = 0, r = s.length - 1;\n  while (l < r) {\n    if (s[l] !== s[r]) return false;\n    l++;\n    r -= 2;\n  }\n  return true;\n}\n\nconsole.log(isPalindrome(\"racecar\"));"
+        }
+    },
+    {
+        "bugId": "BUG-007",
+        "name": "Binary Search Window",
+        "description": "PREVIEW: Binary search correct index return nahi kar raha.\nFULL: Search window boundaries (left/right) update mein off-by-one bug hai.",
+        "marketValue": 320,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "def binary_search(arr, target):\n    left, right = 0, len(arr) - 1\n    while left < right:\n        mid = (left + right) // 2\n        if arr[mid] < target:\n            left = mid\n        else:\n            right = mid - 1\n    return left if arr[left] == target else -1\n\nprint(binary_search([1,3,5,7,9], 7))",
+            "Java": "function binarySearch(arr, target) {\n  let left = 0, right = arr.length - 1;\n  while (left < right) {\n    const mid = Math.floor((left + right) / 2);\n    if (arr[mid] < target) left = mid;\n    else right = mid - 1;\n  }\n  return arr[left] === target ? left : -1;\n}\n\nconsole.log(binarySearch([1,3,5,7,9], 7));",
+            "C": "function binarySearch(arr, target) {\n  let left = 0, right = arr.length - 1;\n  while (left < right) {\n    const mid = Math.floor((left + right) / 2);\n    if (arr[mid] < target) left = mid;\n    else right = mid - 1;\n  }\n  return arr[left] === target ? left : -1;\n}\n\nconsole.log(binarySearch([1,3,5,7,9], 7));"
+        }
+    },
+    {
+        "bugId": "BUG-008",
+        "name": "Factorial Zero",
+        "description": "PREVIEW: Factorial function zero input par wrong result deti hai.\nFULL: Base case definition incomplete hai aur n=0 correctly handle nahi ho raha.",
+        "marketValue": 280,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "def fact(n):\n    if n == 1:\n        return 1\n    return n * fact(n - 1)\n\nprint(fact(0))",
+            "Java": "function fact(n) {\n  if (n === 1) return 1;\n  return n * fact(n - 1);\n}\n\nconsole.log(fact(0));",
+            "C": "function fact(n) {\n  if (n === 1) return 1;\n  return n * fact(n - 1);\n}\n\nconsole.log(fact(0));"
+        }
+    },
+    {
+        "bugId": "BUG-009",
+        "name": "Diagonal Sum",
+        "description": "PREVIEW: Matrix diagonal sum expected value se differ kar raha hai.\nFULL: Index traversal logic incorrect hai ya center element double-count ho raha hai.",
+        "marketValue": 340,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "def diagonal_sum(mat):\n    total = 0\n    n = len(mat)\n    for i in range(n):\n        total += mat[i][i]\n        total += mat[i][n - i - 1]\n    return total\n\nprint(diagonal_sum([[1,2,3],[4,5,6],[7,8,9]]))",
+            "Java": "function diagonalSum(mat) {\n  let sum = 0;\n  for (let i = 0; i < mat.length; i++) {\n    sum += mat[i][i];\n    sum += mat[i][mat.length - i - 1];\n  }\n  return sum;\n}\n\nconsole.log(diagonalSum([[1,2,3],[4,5,6],[7,8,9]]));",
+            "C": "function diagonalSum(mat) {\n  let sum = 0;\n  for (let i = 0; i < mat.length; i++) {\n    sum += mat[i][i];\n    sum += mat[i][mat.length - i - 1];\n  }\n  return sum;\n}\n\nconsole.log(diagonalSum([[1,2,3],[4,5,6],[7,8,9]]));"
         }
     },
     {
         "bugId": "BUG-010",
-        "name": "CORS Misconfiguration",
-        "description": "PREVIEW: Wildcard CORS headers allow unauthorized origins. Can you fix the white-list logic?\nFULL: The system currently uses 'Access-Control-Allow-Origin: *' which is highly insecure for authenticated endpoints. You must replace this with a proper domain whitelist check in the middleware layer.",
-        "marketValue": 500,
-        "difficulty": "Easy",
-        "tag": "🟢",
-        "languageVersions": {
-            "JavaScript": "Fix the CORS middleware in server.js",
-            "Python": "Fix the CORS config in app.py",
-            "C++": "Fix the CORS headers in server.cpp",
-            "Java": "Fix the CorsFilter in WebConfig.java",
-            "C": "Fix the CORS headers in http_server.c"
-        }
-    },
-    {
-        "bugId": "BUG-999",
-        "name": "Average Calculation Logic",
-        "description": "PREVIEW: A Python program that calculates the average of numbers contains logical bugs. Can you identify and fix them?\nFULL: def calculate_average(numbers):\n    total = 0\n    for i in range(len(numbers)):\n        total += numbers[i]\n\n    average = total / (len(numbers) - 1)\n    return average\n\n\nnums = [10, 20, 30, 40]\nprint(\"Average:\", calculate_average(nums))",
-        "marketValue": 1000,
+        "name": "Bubble Sort",
+        "description": "PREVIEW: Bubble sort complete sorting nahi kar pa raha.\nFULL: Inner loop bounds ya swap condition galat hai, jis se array partially sorted reh jata hai.",
+        "marketValue": 360,
         "difficulty": "Medium",
         "tag": "🟡",
         "languageVersions": {
-            "Python": "Fix the division error and loop bounds."
+            "Python": "def bubble_sort(a):\n    n = len(a)\n    for i in range(n):\n        for j in range(n - i):\n            if a[j] > a[j + 1]:\n                a[j], a[j + 1] = a[j + 1], a[j]\n    return a\n\nprint(bubble_sort([5,1,4,2,8]))",
+            "Java": "function bubbleSort(a) {\n  for (let i = 0; i < a.length; i++) {\n    for (let j = 0; j < a.length - i; j++) {\n      if (a[j] > a[j + 1]) {\n        [a[j], a[j + 1]] = [a[j + 1], a[j]];\n      }\n    }\n  }\n  return a;\n}\n\nconsole.log(bubbleSort([5,1,4,2,8]));",
+            "C": "function bubbleSort(a) {\n  for (let i = 0; i < a.length; i++) {\n    for (let j = 0; j < a.length - i; j++) {\n      if (a[j] > a[j + 1]) {\n        [a[j], a[j + 1]] = [a[j + 1], a[j]];\n      }\n    }\n  }\n  return a;\n}\n\nconsole.log(bubbleSort([5,1,4,2,8]));"
+        }
+    },
+    {
+        "bugId": "BUG-011",
+        "name": "State Reset",
+        "description": "PREVIEW: Multiple test runs mein stale state carry ho rahi hai.\nFULL: Shared variable/function state reset nahi ho raha before next execution.",
+        "marketValue": 310,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "state = []\n\ndef run_case(values):\n    for v in values:\n        state.append(v * 2)\n    return state\n\nprint(run_case([1, 2]))\nprint(run_case([3]))",
+            "Java": "let cache = [];\n\nfunction runCase(values) {\n  for (const v of values) cache.push(v * 2);\n  return cache;\n}\n\nconsole.log(runCase([1,2]));\nconsole.log(runCase([3]));",
+            "C": "let cache = [];\n\nfunction runCase(values) {\n  for (const v of values) cache.push(v * 2);\n  return cache;\n}\n\nconsole.log(runCase([1,2]));\nconsole.log(runCase([3]));"
+        }
+    },
+    {
+        "bugId": "BUG-012",
+        "name": "Running Total",
+        "description": "PREVIEW: Running total sequence mismatch show kar raha hai.\nFULL: Update order ya accumulator initialization incorrect hai.",
+        "marketValue": 300,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "def running_total(arr):\n    out = []\n    total = 0\n    for x in arr:\n        out.append(total)\n        total = x\n    return out\n\nprint(running_total([2, 4, 6]))",
+            "Java": "function runningTotal(arr) {\n  let out = [];\n  let total = 0;\n  for (let i = 0; i < arr.length; i++) {\n    out.push(total);\n    total = arr[i];\n  }\n  return out;\n}\n\nconsole.log(runningTotal([2,4,6]));",
+            "C": "function runningTotal(arr) {\n  let out = [];\n  let total = 0;\n  for (let i = 0; i < arr.length; i++) {\n    out.push(total);\n    total = arr[i];\n  }\n  return out;\n}\n\nconsole.log(runningTotal([2,4,6]));"
+        }
+    },
+    {
+        "bugId": "BUG-013",
+        "name": "String Mutation",
+        "description": "PREVIEW: String update operation expected output nahi de rahi.\nFULL: Immutable string ko direct mutate karne ki koshish se logic fail ho raha hai.",
+        "marketValue": 330,
+        "difficulty": "Medium",
+        "tag": "🟡",
+        "languageVersions": {
+            "Python": "def replace_at(s, idx, ch):\n    s[idx] = ch\n    return s\n\nprint(replace_at(\"debug\", 2, \"X\"))",
+            "Java": "function replaceAt(s, idx, ch) {\n  s[idx] = ch;\n  return s;\n}\n\nconsole.log(replaceAt(\"debug\", 2, \"X\"));",
+            "C": "function replaceAt(s, idx, ch) {\n  s[idx] = ch;\n  return s;\n}\n\nconsole.log(replaceAt(\"debug\", 2, \"X\"));"
+        }
+    },
+    {
+        "bugId": "BUG-014",
+        "name": "Fibonacci Performance",
+        "description": "PREVIEW: Fibonacci solution large input par timeout ho raha hai.\nFULL: Exponential recursion ki wajah se performance degrade ho rahi hai; optimization missing hai.",
+        "marketValue": 150,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "def fib(n):\n    if n <= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)\n\nprint(fib(45))",
+            "Java": "function fib(n) {\n  if (n <= 1) return n;\n  return fib(n - 1) + fib(n - 2);\n}\n\nconsole.log(fib(45));",
+            "C": "function fib(n) {\n  if (n <= 1) return n;\n  return fib(n - 1) + fib(n - 2);\n}\n\nconsole.log(fib(45));"
+        }
+    },
+    {
+        "bugId": "BUG-015",
+        "name": "Heap Index",
+        "description": "PREVIEW: Heap operations wrong ordering produce kar rahi hain.\nFULL: Parent/child index formula mismatch ki wajah se heap property break ho rahi hai.",
+        "marketValue": 160,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "def parent(i):\n    return i // 2\n\ndef left(i):\n    return 2 * i\n\nprint(parent(1), left(1))",
+            "Java": "function parent(i) {\n  return Math.floor(i / 2);\n}\n\nfunction left(i) {\n  return 2 * i;\n}\n\nconsole.log(parent(1), left(1));",
+            "C": "function parent(i) {\n  return Math.floor(i / 2);\n}\n\nfunction left(i) {\n  return 2 * i;\n}\n\nconsole.log(parent(1), left(1));"
+        }
+    },
+    {
+        "bugId": "BUG-016",
+        "name": "DP Transition",
+        "description": "PREVIEW: Dynamic programming result expected se lower aa raha hai.\nFULL: Transition equation mein wrong state reference use ho raha hai.",
+        "marketValue": 170,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "def knap(wt, val, W):\n    dp = [0] * (W + 1)\n    for i in range(len(wt)):\n        for w in range(wt[i], W + 1):\n            dp[w] = max(dp[w], dp[w - wt[i]] + val[i])\n    return dp[W]\n\nprint(knap([2, 3, 4], [4, 5, 6], 5))",
+            "Java": "function knap(wt, val, W) {\n  const dp = Array(W + 1).fill(0);\n  for (let i = 0; i < wt.length; i++) {\n    for (let w = wt[i]; w <= W; w++) {\n      dp[w] = Math.max(dp[w], dp[w - wt[i]] + val[i]);\n    }\n  }\n  return dp[W];\n}\n\nconsole.log(knap([2,3,4], [4,5,6], 5));",
+            "C": "function knap(wt, val, W) {\n  const dp = Array(W + 1).fill(0);\n  for (let i = 0; i < wt.length; i++) {\n    for (let w = wt[i]; w <= W; w++) {\n      dp[w] = Math.max(dp[w], dp[w - wt[i]] + val[i]);\n    }\n  }\n  return dp[W];\n}\n\nconsole.log(knap([2,3,4], [4,5,6], 5));"
+        }
+    },
+    {
+        "bugId": "BUG-017",
+        "name": "Sliding Window",
+        "description": "PREVIEW: Sliding window algorithm valid answer miss kar raha hai.\nFULL: Window expand/shrink conditions incorrect hain, jis se candidate ranges skip ho rahi hain.",
+        "marketValue": 140,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "def longest_unique(s):\n    left = 0\n    seen = {}\n    best = 0\n    for right, ch in enumerate(s):\n        if ch in seen:\n            left += 1\n        seen[ch] = right\n        best = max(best, right - left + 1)\n    return best\n\nprint(longest_unique(\"abba\"))",
+            "Java": "function longestUnique(s) {\n  let left = 0;\n  let seen = new Map();\n  let best = 0;\n  for (let right = 0; right < s.length; right++) {\n    if (seen.has(s[right])) {\n      left++;\n    }\n    seen.set(s[right], right);\n    best = Math.max(best, right - left + 1);\n  }\n  return best;\n}\n\nconsole.log(longestUnique(\"abba\"));",
+            "C": "function longestUnique(s) {\n  let left = 0;\n  let seen = new Map();\n  let best = 0;\n  for (let right = 0; right < s.length; right++) {\n    if (seen.has(s[right])) {\n      left++;\n    }\n    seen.set(s[right], right);\n    best = Math.max(best, right - left + 1);\n  }\n  return best;\n}\n\nconsole.log(longestUnique(\"abba\"));"
+        }
+    },
+    {
+        "bugId": "BUG-018",
+        "name": "Hash Overwrite",
+        "description": "PREVIEW: Hash map values unexpectedly overwrite ho rahi hain.\nFULL: Key strategy flawed hai ya duplicate-key handling incorrect hai.",
+        "marketValue": 180,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "def count_words(words):\n    freq = {}\n    for w in words:\n        freq[\"key\"] = freq.get(\"key\", 0) + 1\n    return freq\n\nprint(count_words([\"a\", \"b\", \"a\"]))",
+            "Java": "function countWords(words) {\n  const freq = {};\n  for (const w of words) {\n    freq[\"key\"] = (freq[\"key\"] || 0) + 1;\n  }\n  return freq;\n}\n\nconsole.log(countWords([\"a\",\"b\",\"a\"]));",
+            "C": "function countWords(words) {\n  const freq = {};\n  for (const w of words) {\n    freq[\"key\"] = (freq[\"key\"] || 0) + 1;\n  }\n  return freq;\n}\n\nconsole.log(countWords([\"a\",\"b\",\"a\"]));"
+        }
+    },
+    {
+        "bugId": "BUG-019",
+        "name": "DFS Infinite",
+        "description": "PREVIEW: DFS traversal kuch graphs par infinite loop mein chali jati hai.\nFULL: Visited tracking missing/incorrect hai, especially cyclic graphs ke liye.",
+        "marketValue": 200,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "def dfs(node, graph, visited=None):\n    if visited is None:\n        visited = set()\n    for nxt in graph[node]:\n        dfs(nxt, graph, visited)\n\ng = {\"A\": [\"B\"], \"B\": [\"C\"], \"C\": [\"A\"]}\ndfs(\"A\", g)",
+            "Java": "function dfs(node, graph, visited = new Set()) {\n  for (const nxt of graph[node]) {\n    dfs(nxt, graph, visited);\n  }\n}\n\nconst g = { A: [\"B\"], B: [\"C\"], C: [\"A\"] };\ndfs(\"A\", g);",
+            "C": "function dfs(node, graph, visited = new Set()) {\n  for (const nxt of graph[node]) {\n    dfs(nxt, graph, visited);\n  }\n}\n\nconst g = { A: [\"B\"], B: [\"C\"], C: [\"A\"] };\ndfs(\"A\", g);"
+        }
+    },
+    {
+        "bugId": "BUG-020",
+        "name": "Float Precision",
+        "description": "PREVIEW: Floating point comparison edge cases fail ho rahe hain.\nFULL: Direct equality check ki wajah se precision error expose ho raha hai.",
+        "marketValue": 155,
+        "difficulty": "Hard",
+        "tag": "🔴",
+        "languageVersions": {
+            "Python": "x = 0.1 + 0.2\nif x == 0.3:\n    print(\"equal\")\nelse:\n    print(\"not equal\")",
+            "Java": "const x = 0.1 + 0.2;\nif (x === 0.3) {\n  console.log(\"equal\");\n} else {\n  console.log(\"not equal\");\n}",
+            "C": "const x = 0.1 + 0.2;\nif (x === 0.3) {\n  console.log(\"equal\");\n} else {\n  console.log(\"not equal\");\n}"
         }
     }
 ]
