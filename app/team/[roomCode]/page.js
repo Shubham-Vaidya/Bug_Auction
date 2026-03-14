@@ -201,7 +201,7 @@ export default function TeamPage({ params }) {
                 alt="Character"
                 width={300}
                 height={460}
-                className="pointer-events-none absolute bottom-0 right-0 z-10 hidden w-48 select-none drop-shadow-2xl md:block lg:w-56 xl:w-72"
+                className="pointer-events-none  absolute bottom-1 right-0 z-10 hidden w-48 select-none drop-shadow-2xl md:block lg:w-56 xl:w-72"
                 priority
             />
 
