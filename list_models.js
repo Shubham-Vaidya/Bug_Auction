@@ -1,22 +1,26 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const dotenv = require("dotenv");
+const path = require("path");
+
+dotenv.config({ path: path.join(__dirname, ".env.local") });
 
 async function listModels() {
-    const apiKey = "AIzaSyCGmTQAm9f_AX6sdedoVMlIrDSNj8KKY3Q";
+    const apiKey = process.env.GEMINI_API_KEY;
     console.log("------------------------------------------");
     console.log("Listing available models...");
+
+    if (!apiKey) {
+        console.error("ERROR: GEMINI_API_KEY not found in .env.local");
+        return;
+    }
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // Use the underlying client to list models if possible, 
-        // or just try different names.
-        // Actually, the easiest is to just try a few common ones.
-        
         const modelsToTry = [
-            "gemini-1.5-flash-001",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-pro",
-            "gemini-1.5-pro-latest",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
             "gemini-pro"
         ];
 

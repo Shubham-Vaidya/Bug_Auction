@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CodeEditor from "@/components/CodeEditor";
+import PowerCard from "@/components/PowerCard";
 import BugDetailsModal from "@/components/BugDetailsModal";
 
 const panelCardClass = "rounded-2xl border border-white/20 bg-black/40 p-6 backdrop-blur-md sm:p-7";
@@ -307,21 +308,15 @@ export default function TeamPage({ params }) {
                             {room?.activePowerCard && room.powerCardStatus === "LIVE" ? (() => {
                                 const pc = room.activePowerCard;
                                 return (
-                                    <div className="rounded-xl border border-emerald-300/40 bg-emerald-400/10 p-3 sm:p-4">
-                                        <div className="text-xs uppercase tracking-widest text-slate-500">POWER CARD: {pc.cardId} {pc.tag}</div>
-                                        <div className="mt-1 text-xl font-bold text-white">{pc.name}</div>
-                                        <div className="mt-2 text-sm text-slate-300">{pc.description}</div>
-                                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                            <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
-                                                <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Market Value</div>
-                                                <div className="text-lg font-semibold text-emerald-300">₹{pc.marketValue?.toLocaleString()}</div>
-                                            </div>
-                                            <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
-                                                <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Rarity</div>
-                                                <div className={`text-lg font-semibold ${rarityTextClass[pc.rarity] || "text-emerald-300"}`}>{pc.rarity}</div>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 text-center text-sm font-semibold uppercase tracking-[0.05em] text-emerald-200">[ POWER CARD AUCTION LIVE ]</div>
+                                    <div className="max-w-md">
+                                        <PowerCard 
+                                            card={pc} 
+                                            onClick={(c) => {
+                                                // Handle purchase via existing logic if any, 
+                                                // or just provide feedback if it's strictly admin-allotted.
+                                                alert(`Requesting purchase of ${c.name} (₹${c.marketValue})`);
+                                            }}
+                                        />
                                     </div>
                                 );
                             })() : (
@@ -492,40 +487,36 @@ export default function TeamPage({ params }) {
                                     })}
                                 </div>
                             )}
+
+                            {/* POWER UPS SECTION */}
+                            <div className="mt-8">
+                                <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-yellow-300/50">Tactical Arsenal</div>
+                                <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-yellow-300 sm:text-3xl">POWER UPS</h3>
+                                
+                                {(!myData || !myData.powerCardPurchases || myData.powerCardPurchases.length === 0) ? (
+                                    <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-8 text-center">
+                                        <div className="text-sm text-slate-400">No power cards owned yet.</div>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {myData.powerCardPurchases.map((pc, idx) => (
+                                            <PowerCard 
+                                                key={idx} 
+                                                card={{
+                                                    ...pc,
+                                                    name: pc.cardName,
+                                                    marketValue: pc.price
+                                                }} 
+                                                showAction={false} 
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
 
-                        <div className={panelCardClass}>
-                            <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-emerald-300/50">Your Power Cards</div>
-                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-emerald-300 sm:text-3xl">POWER PORTFOLIO</h3>
 
-                            {!myData || myData.powerCardPurchases?.length === 0 ? (
-                                <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-8 text-center">
-                                    <div className="mb-2 text-2xl">⚡</div>
-                                    <div className="text-base text-slate-200">No power cards purchased yet.</div>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {myData.powerCardPurchases?.map((pc, i) => (
-                                        <div key={`${pc.cardId}-${i}`} className="rounded-xl border border-white/25 bg-black/35 p-3 sm:p-4">
-                                            <div className="text-xs uppercase tracking-widest text-slate-500">{pc.cardId} {pc.tag}</div>
-                                            <div className="mt-1 text-xl font-bold text-white">{pc.cardName}</div>
-                                            <div className="mt-2 text-sm text-slate-300">{pc.description}</div>
-                                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                                <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
-                                                    <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Price Paid</div>
-                                                    <div className="text-lg font-semibold text-emerald-300">₹{pc.price?.toLocaleString()}</div>
-                                                </div>
-                                                <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
-                                                    <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Rarity</div>
-                                                    <div className={`text-lg font-semibold ${rarityTextClass[pc.rarity] || "text-emerald-300"}`}>{pc.rarity}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
                     </div>
 
                     <div className="space-y-5 lg:col-span-4">

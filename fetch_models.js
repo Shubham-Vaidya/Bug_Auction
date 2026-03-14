@@ -1,14 +1,21 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const dotenv = require("dotenv");
+const path = require("path");
+
+// Load .env.local
+dotenv.config({ path: path.join(__dirname, ".env.local") });
 
 async function listAllModels() {
-    const apiKey = "AIzaSyCGmTQAm9f_AX6sdedoVMlIrDSNj8KKY3Q";
+    const apiKey = process.env.GEMINI_API_KEY;
     console.log("------------------------------------------");
     console.log("Fetching list of authorized models for this key...");
 
+    if (!apiKey) {
+        console.error("ERROR: GEMINI_API_KEY not found in .env.local");
+        return;
+    }
+
     try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        
-        // This is a direct fetch because the library's listModels might be tricky
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
         const data = await response.json();
 

@@ -1,13 +1,21 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const dotenv = require("dotenv");
+const path = require("path");
+
+dotenv.config({ path: path.join(__dirname, ".env.local") });
 
 async function testGemini() {
-    const apiKey = "AIzaSyCGmTQAm9f_AX6sdedoVMlIrDSNj8KKY3Q";
+    const apiKey = process.env.GEMINI_API_KEY;
     console.log("------------------------------------------");
     console.log("Checking GEMINI_API_KEY...");
-    console.log("API Key found (starts with):", apiKey.substring(0, 5) + "...");
+
+    if (!apiKey) {
+        console.error("ERROR: GEMINI_API_KEY not found in .env.local");
+        return;
+    }
 
     try {
-        console.log("Initializing Gemini Pro (flash)...");
+        console.log("Initializing Gemini...");
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
