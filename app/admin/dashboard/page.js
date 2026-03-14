@@ -20,6 +20,8 @@ export default function AdminDashboard() {
     // Create room form
     const [roomName, setRoomName] = useState("");
     const [coinsPerTeam, setCoinsPerTeam] = useState(5000);
+    const [confirmDeleteRoomId, setConfirmDeleteRoomId] = useState(null);
+    const [isDeletingRoomId, setIsDeletingRoomId] = useState(null);
 
     // Active (shown) bug
     const [activeBugId, setActiveBugId] = useState(null);
@@ -143,6 +145,40 @@ export default function AdminDashboard() {
                 fetchRooms();
             }
         } catch (err) { addFeed("Failed to create room", "amber"); }
+    };
+
+    const handleDeleteRoom = async (room) => {
+        if (!user || !room?._id) return;
+        setIsDeletingRoomId(room._id);
+        try {
+            const res = await fetch("/api/admin/rooms", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId: room._id, userId: user._id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                addFeed(`Room deleted permanently: ${room.roomId}`, "amber");
+                if (selectedRoom?._id === room._id) {
+                    setSelectedRoom(null);
+                    setTeams([]);
+                    setSubmissions([]);
+                    setRebidPool([]);
+                    setAuctionPhase("WAITING");
+                    setPowerCardPhase("WAITING");
+                    setActiveBugId(null);
+                    setActivePowerCardId(null);
+                }
+                fetchRooms();
+            } else {
+                addFeed(data.error || "Failed to delete room", "amber");
+            }
+        } catch (err) {
+            addFeed("Failed to delete room", "amber");
+        } finally {
+            setConfirmDeleteRoomId(null);
+            setIsDeletingRoomId(null);
+        }
     };
 
     const handleSeedBugs = async () => {
@@ -408,9 +444,46 @@ export default function AdminDashboard() {
                                             <div className="text-xs text-sec">Power: {r.powerCardStatus || "WAITING"}</div>
                                         </div>
 
-                                        <span className={`badge ${r.status === 'LIVE' ? 'badge-green' : r.status === 'ENDED' ? 'badge-blue' : 'badge-gray'}`}>
-                                            {r.status}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`badge ${r.status === 'LIVE' ? 'badge-green' : r.status === 'ENDED' ? 'badge-blue' : 'badge-gray'}`}>
+                                                {r.status}
+                                            </span>
+                                            {confirmDeleteRoomId === r._id ? (
+                                                <>
+                                                    <button
+                                                        className="btn btn-sm btn-amber"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteRoom(r);
+                                                        }}
+                                                        disabled={isDeletingRoomId === r._id}
+                                                    >
+                                                        {isDeletingRoomId === r._id ? "DELETING..." : "CONFIRM"}
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setConfirmDeleteRoomId(null);
+                                                        }}
+                                                        disabled={isDeletingRoomId === r._id}
+                                                    >
+                                                        CANCEL
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    className="btn btn-sm"
+                                                    title="Delete room permanently"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDeleteRoomId(r._id);
+                                                    }}
+                                                >
+                                                    🗑
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             )}
