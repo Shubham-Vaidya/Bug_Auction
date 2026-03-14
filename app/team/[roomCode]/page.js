@@ -128,7 +128,7 @@ export default function TeamPage({ params }) {
             const res = await fetch("/api/rebid/sell", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: user._id, roomCode, bugId }),
+                body: JSON.stringify({ userId: user._id, roomCode, bugStringId: bugId }),
             });
             const data = await res.json();
             if (data.success) {
