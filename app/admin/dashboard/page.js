@@ -11,8 +11,10 @@ export default function AdminDashboard() {
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [teams, setTeams] = useState([]);
     const [bugs, setBugs] = useState([]);
+    const [powerCards, setPowerCards] = useState([]);
     const [feedLog, setFeedLog] = useState([]);
     const [auctionPhase, setAuctionPhase] = useState("WAITING");
+    const [powerCardPhase, setPowerCardPhase] = useState("WAITING");
 
     // Create room form
     const [roomName, setRoomName] = useState("");
@@ -20,14 +22,15 @@ export default function AdminDashboard() {
 
     // Active (shown) bug
     const [activeBugId, setActiveBugId] = useState(null);
+    const [activePowerCardId, setActivePowerCardId] = useState(null);
 
     // Allot modal
-    const [allotModal, setAllotModal] = useState(null); // { bug, teamPlayerId, price }
+    const [allotModal, setAllotModal] = useState(null); // { type, ...item }
     const [allotPrice, setAllotPrice] = useState(0);
     const [allotTeamId, setAllotTeamId] = useState("");
 
     // Submissions tab
-    const [centerTab, setCenterTab] = useState("auction"); // "auction" | "submissions" | "rebidding"
+    const [centerTab, setCenterTab] = useState("auction"); // "auction" | "powercards" | "submissions" | "rebidding"
     const [submissions, setSubmissions] = useState([]);
     const [scoreInputs, setScoreInputs] = useState({}); // { submissionId: scoreValue }
     const [expandedCode, setExpandedCode] = useState(null); // submissionId with code visible
@@ -80,6 +83,15 @@ export default function AdminDashboard() {
         } catch (err) { console.error(err); }
     }, []);
 
+    // Fetch power cards
+    const fetchPowerCards = useCallback(async () => {
+        try {
+            const res = await fetch("/api/power-cards/list");
+            const data = await res.json();
+            if (data.success) setPowerCards(data.powerCards);
+        } catch (err) { console.error(err); }
+    }, []);
+
     // Fetch submissions
     const fetchSubmissions = useCallback(async () => {
         if (!selectedRoom || !user) return;
@@ -100,13 +112,16 @@ export default function AdminDashboard() {
         } catch (err) { console.error(err); }
     }, [selectedRoom]);
 
-    useEffect(() => { fetchRooms(); fetchBugs(); }, [fetchRooms, fetchBugs]);
+    useEffect(() => { fetchRooms(); fetchBugs(); fetchPowerCards(); }, [fetchRooms, fetchBugs, fetchPowerCards]);
     useEffect(() => {
         if (!selectedRoom) return;
         fetchTeams();
         fetchSubmissions();
         fetchRebidPool();
         setRebidStatus(selectedRoom.rebiddingStatus || "INACTIVE");
+        setPowerCardPhase(selectedRoom.powerCardStatus || "WAITING");
+        setActiveBugId(selectedRoom.activeBug?.bugId || null);
+        setActivePowerCardId(selectedRoom.activePowerCard?.cardId || null);
         const interval = setInterval(() => { fetchTeams(); fetchSubmissions(); fetchRebidPool(); }, 3000);
         return () => clearInterval(interval);
     }, [selectedRoom, fetchTeams, fetchSubmissions, fetchRebidPool]);
@@ -140,6 +155,17 @@ export default function AdminDashboard() {
         } catch (err) { addFeed("Failed to seed bugs", "amber"); }
     };
 
+    const handleSeedPowerCards = async () => {
+        try {
+            const res = await fetch("/api/power-cards/seed", { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                addFeed(data.message, "green");
+                fetchPowerCards();
+            }
+        } catch (err) { addFeed("Failed to seed power cards", "amber"); }
+    };
+
     const handleShowBug = async (bug) => {
         if (!selectedRoom) return;
         try {
@@ -158,16 +184,35 @@ export default function AdminDashboard() {
         } catch (err) { addFeed("Failed to reveal bug", "amber"); }
     };
 
-    const handleAllot = async () => {
-        if (!allotModal || !allotTeamId) return;
+    const handleShowPowerCard = async (card) => {
+        if (!selectedRoom) return;
         try {
-            const res = await fetch(`/api/rooms/${selectedRoom.roomId}/allot`, {
+            const res = await fetch(`/api/rooms/${selectedRoom.roomId}/show-power-card`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user._id, cardId: card.cardId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setActivePowerCardId(card.cardId);
+                addFeed(`LIVE POWER CARD: ${card.cardId} - ${card.name}`, "blue");
+            } else {
+                addFeed(data.error, "amber");
+            }
+        } catch (err) { addFeed("Failed to reveal power card", "amber"); }
+    };
+
+    const handleAllot = async () => {
+        if (!allotModal || !allotTeamId || !selectedRoom) return;
+        const isPowerCard = allotModal.type === "powercard";
+        try {
+            const res = await fetch(`/api/rooms/${selectedRoom.roomId}/${isPowerCard ? "allot-power-card" : "allot"}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     userId: user._id,
                     teamPlayerId: allotTeamId,
-                    bugId: allotModal.bugId,
+                    ...(isPowerCard ? { cardId: allotModal.cardId } : { bugId: allotModal.bugId }),
                     price: allotPrice,
                 }),
             });
@@ -180,21 +225,26 @@ export default function AdminDashboard() {
             } else {
                 addFeed(data.error, "amber");
             }
-        } catch (err) { addFeed("Failed to allot bug", "amber"); }
+        } catch (err) { addFeed(`Failed to allot ${isPowerCard ? "power card" : "bug"}`, "amber"); }
     };
 
-    const updateRoomStatus = async (newStatus) => {
+    const updateRoomStatus = async (newStatus, scope = "BUG") => {
         if (!selectedRoom) return;
         try {
             const res = await fetch(`/api/rooms/${selectedRoom.roomId}/status`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus, userId: user._id }),
+                body: JSON.stringify({ status: newStatus, userId: user._id, scope }),
             });
             const data = await res.json();
             if (data.success) {
-                setAuctionPhase(newStatus);
-                addFeed(`Room status: ${newStatus}`, newStatus === "LIVE" ? "green" : newStatus === "PAUSED" ? "amber" : "blue");
+                if (scope === "POWER") {
+                    setPowerCardPhase(newStatus);
+                    addFeed(`Power card phase: ${newStatus}`, newStatus === "LIVE" ? "green" : "blue");
+                } else {
+                    setAuctionPhase(newStatus);
+                    addFeed(`Bug auction status: ${newStatus}`, newStatus === "LIVE" ? "green" : newStatus === "PAUSED" ? "amber" : "blue");
+                }
                 fetchRooms();
             } else {
                 addFeed(data.error, "amber");
@@ -314,6 +364,8 @@ export default function AdminDashboard() {
                                     <div className="text-xs text-sec mb-8" style={{ letterSpacing: '2px' }}>ACTIVE ROOM</div>
                                     <div className="orbitron neon-green" style={{ fontSize: '1.3rem', letterSpacing: '4px' }}>{selectedRoom.roomId}</div>
                                     <div className="text-xs text-sec mt-4">₹{selectedRoom.coinsPerTeam?.toLocaleString()} per team</div>
+                                    <div className="text-xs text-sec mt-4">Bug Phase: {auctionPhase}</div>
+                                    <div className="text-xs text-sec">Power Phase: {powerCardPhase}</div>
                                     <button
                                         className="btn btn-purple btn-full mt-16"
                                         onClick={() => window.open(`/leaderboard/${selectedRoom.roomId}`, "_blank")}
@@ -332,10 +384,11 @@ export default function AdminDashboard() {
                                 <div className="text-xs text-sec">No rooms created yet</div>
                             ) : (
                                 rooms.map((r) => (
-                                    <div key={r._id} className="team-item" style={{ cursor: 'pointer', border: selectedRoom?._id === r._id ? '1px solid var(--neon-green)' : '1px solid var(--border-subtle)' }} onClick={() => { setSelectedRoom(r); setAuctionPhase(r.status); }}>
+                                    <div key={r._id} className="team-item" style={{ cursor: 'pointer', border: selectedRoom?._id === r._id ? '1px solid var(--neon-green)' : '1px solid var(--border-subtle)' }} onClick={() => { setSelectedRoom(r); setAuctionPhase(r.status); setPowerCardPhase(r.powerCardStatus || 'WAITING'); }}>
                                         <div>
                                             <div className="mono" style={{ fontSize: '0.85rem', fontWeight: 600 }}>{r.roomId}</div>
                                             <div className="text-xs text-sec">{r.roomName}</div>
+                                            <div className="text-xs text-sec">Power: {r.powerCardStatus || "WAITING"}</div>
                                         </div>
 
                                         <span className={`badge ${r.status === 'LIVE' ? 'badge-green' : r.status === 'ENDED' ? 'badge-blue' : 'badge-gray'}`}>
@@ -383,6 +436,13 @@ export default function AdminDashboard() {
                                     onClick={() => setCenterTab("auction")}
                                 >
                                     🎯 Auction Control
+                                </button>
+                                <button
+                                    className={`btn btn-sm ${centerTab === 'powercards' ? 'btn-green' : ''}`}
+                                    style={centerTab !== 'powercards' ? { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-sec)' } : {}}
+                                    onClick={() => setCenterTab("powercards")}
+                                >
+                                    ⚡ Power Cards {powerCards.length > 0 && <span className="badge badge-green" style={{ marginLeft: '6px', fontSize: '0.6rem' }}>{powerCards.length}</span>}
                                 </button>
                                 <button
                                     className={`btn btn-sm ${centerTab === 'submissions' ? 'btn-purple' : ''}`}
@@ -452,7 +512,89 @@ export default function AdminDashboard() {
                                                                 </button>
                                                             )}
                                                             {selectedRoom && teams.length > 0 && (
-                                                                <button className="btn btn-purple btn-sm" onClick={(e) => { e.stopPropagation(); setAllotModal(bug); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
+                                                                <button className="btn btn-purple btn-sm" onClick={(e) => { e.stopPropagation(); setAllotModal({ ...bug, type: "bug" }); setAllotPrice(bug.marketValue); setAllotTeamId(teams[0]?._id || ""); }}>
+                                                                    🎯 ALLOT
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </>
+                            ) : centerTab === "powercards" ? (
+                                <>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                        <h3 className="orbitron" style={{ fontSize: '0.95rem' }}>POWER CARD MARKET</h3>
+                                        <button className="btn btn-green btn-sm" onClick={handleSeedPowerCards}>⚡ SEED POWER CARDS</button>
+                                    </div>
+
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div className="panel-title mb-12">Power Card Phase</div>
+                                        <div className="btn-row" style={{ marginBottom: '8px' }}>
+                                            <button
+                                                className="btn btn-green btn-sm"
+                                                style={{ color: '#fff !important' }}
+                                                onClick={() => updateRoomStatus("LIVE", "POWER")}
+                                                disabled={auctionPhase !== "ENDED" || powerCardPhase === "LIVE"}
+                                            >
+                                                ▶ START
+                                            </button>
+                                            <button
+                                                className="btn btn-blue btn-sm"
+                                                style={{ color: '#fff !important' }}
+                                                onClick={() => updateRoomStatus("ENDED", "POWER")}
+                                                disabled={powerCardPhase === "ENDED"}
+                                            >
+                                                🏁 END
+                                            </button>
+                                        </div>
+                                        {auctionPhase !== "ENDED" && (
+                                            <div className="text-xs text-sec">End bug auction first to unlock this phase.</div>
+                                        )}
+                                    </div>
+
+                                    <div className="section-divider"></div>
+
+                                    {powerCards.length === 0 ? (
+                                        <div className="text-xs text-sec text-center" style={{ padding: '24px' }}>
+                                            No power cards loaded. Click "SEED POWER CARDS" to load the pool.
+                                        </div>
+                                    ) : (
+                                        powerCards.map((card) => {
+                                            const rarityColor = card.rarity === "Legendary" ? "neon-purple" : card.rarity === "Epic" ? "neon-amber" : card.rarity === "Rare" ? "neon-blue" : "neon-green";
+                                            return (
+                                                <div key={card._id} className="bug-card" style={{ marginBottom: '16px' }}>
+                                                    <div className="bug-card-id">CARD ID: {card.cardId} &nbsp; {card.tag}</div>
+                                                    <div className="bug-card-name">{card.name}</div>
+                                                    <div className="text-xs text-sec mb-12">{card.description}</div>
+                                                    <div className="bug-card-meta">
+                                                        <div className="bug-meta-item">
+                                                            <span className="bug-meta-label">Market Value</span>
+                                                            <span className="bug-meta-value neon-green">₹{card.marketValue?.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="bug-meta-item">
+                                                            <span className="bug-meta-label">Rarity</span>
+                                                            <span className={`bug-meta-value ${rarityColor}`}>{card.rarity}</span>
+                                                        </div>
+                                                        <div className="bug-meta-item" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                            {selectedRoom && (
+                                                                <button
+                                                                    className="btn btn-blue btn-sm"
+                                                                    onClick={() => handleShowPowerCard(card)}
+                                                                    style={activePowerCardId === card.cardId ? { background: 'var(--neon-blue)', color: '#000' } : {}}
+                                                                    disabled={auctionPhase !== "ENDED" || powerCardPhase === "ENDED"}
+                                                                >
+                                                                    {activePowerCardId === card.cardId ? '🔴 LIVE' : '👁 SHOW'}
+                                                                </button>
+                                                            )}
+                                                            {selectedRoom && teams.length > 0 && (
+                                                                <button
+                                                                    className="btn btn-purple btn-sm"
+                                                                    onClick={() => { setAllotModal({ ...card, type: 'powercard' }); setAllotPrice(card.marketValue); setAllotTeamId(teams[0]?._id || ""); }}
+                                                                    disabled={auctionPhase !== "ENDED" || powerCardPhase !== "LIVE"}
+                                                                >
                                                                     🎯 ALLOT
                                                                 </button>
                                                             )}
@@ -543,7 +685,7 @@ export default function AdminDashboard() {
                                                                             <button
                                                                                 className="btn btn-purple btn-sm"
                                                                                 style={{ fontSize: '0.65rem' }}
-                                                                                onClick={() => { setAllotModal(item.bugId); setAllotPrice(item.bugId.marketValue); setAllotTeamId(teams[0]?._id || ""); }}
+                                                                                onClick={() => { setAllotModal({ ...item.bugId, type: "bug" }); setAllotPrice(item.bugId.marketValue); setAllotTeamId(teams[0]?._id || ""); }}
                                                                             >
                                                                                 🎯 ALLOT
                                                                             </button>
@@ -710,6 +852,10 @@ export default function AdminDashboard() {
                                     <span className="orbitron neon-blue">{bugs.length}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                                    <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>POWER CARDS</span>
+                                    <span className="orbitron neon-green">{powerCards.length}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                                     <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>SUBMISSIONS</span>
                                     <span className="orbitron neon-amber">{submissions.length}</span>
                                 </div>
@@ -724,9 +870,9 @@ export default function AdminDashboard() {
                 allotModal && (
                     <div className="modal-overlay active">
                         <div className="modal-box">
-                            <h3 className="orbitron neon-purple">ALLOT BUG TO TEAM</h3>
+                            <h3 className="orbitron neon-purple">{allotModal.type === "powercard" ? "ALLOT POWER CARD TO TEAM" : "ALLOT BUG TO TEAM"}</h3>
                             <div className="bug-card" style={{ marginBottom: '20px' }}>
-                                <div className="bug-card-id">{allotModal.bugId} {allotModal.tag}</div>
+                                <div className="bug-card-id">{allotModal.type === "powercard" ? allotModal.cardId : allotModal.bugId} {allotModal.tag}</div>
                                 <div className="bug-card-name">{allotModal.name}</div>
                             </div>
                             <div className="input-group">

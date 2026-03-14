@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
 import Purchase from "@/models/Purchase";
+import PowerCardPurchase from "@/models/PowerCardPurchase";
 
 export async function GET(request, { params }) {
     try {
@@ -25,6 +26,9 @@ export async function GET(request, { params }) {
                 const purchases = await Purchase.find({ userId: p.userId?._id, roomId: room._id })
                     .populate("bugId", "bugId name description marketValue difficulty tag")
                     .lean();
+                const powerCardPurchases = await PowerCardPurchase.find({ userId: p.userId?._id, roomId: room._id })
+                    .populate("powerCardId", "cardId name description marketValue rarity tag")
+                    .lean();
                 return {
                     _id: p._id,
                     odid: p.userId?._id,
@@ -40,6 +44,14 @@ export async function GET(request, { params }) {
                         price: pr.purchasePrice,
                         difficulty: pr.bugId?.difficulty,
                         tag: pr.bugId?.tag,
+                    })),
+                    powerCardPurchases: powerCardPurchases.map((pc) => ({
+                        cardId: pc.powerCardId?.cardId,
+                        cardName: pc.powerCardId?.name,
+                        description: pc.powerCardId?.description,
+                        price: pc.purchasePrice,
+                        rarity: pc.powerCardId?.rarity,
+                        tag: pc.powerCardId?.tag,
                     })),
                 };
             })
