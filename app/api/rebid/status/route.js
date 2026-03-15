@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request) {
     try {
@@ -22,6 +23,12 @@ export async function POST(request) {
 
         room.rebiddingStatus = status;
         await room.save();
+        await broadcastRoomEvent(room.roomId, "roomStatusChanged", {
+            scope: "REBID",
+            rebiddingStatus: status,
+            roomStatus: room.status,
+            powerCardStatus: room.powerCardStatus,
+        });
 
         return NextResponse.json({ success: true, message: `Rebidding status updated to ${status}` });
     } catch (error) {

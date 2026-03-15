@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import Submission from "@/models/Submission";
+import Bug from "@/models/Bug";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request) {
     try {
@@ -36,6 +38,16 @@ export async function POST(request) {
         submission.profit = score - submission.purchasePrice;
         submission.status = "scored";
         await submission.save();
+
+        const bug = await Bug.findById(submission.bugId).select("bugId name");
+        await broadcastRoomEvent(room.roomId, "submissionScored", {
+            submissionId: submission._id,
+            teamName: submission.teamName,
+            score,
+            profit: submission.profit,
+            bugId: bug?.bugId,
+            bugName: bug?.name,
+        });
 
         return NextResponse.json({
             success: true,

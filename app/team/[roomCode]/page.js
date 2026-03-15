@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CodeEditor from "@/components/CodeEditor";
 import PowerCard from "@/components/PowerCard";
 import BugDetailsModal from "@/components/BugDetailsModal";
+import { supabase } from "@/lib/supabase";
 
 const panelCardClass = "rounded-2xl border border-white/20 bg-black/40 p-6 backdrop-blur-md sm:p-7";
 
@@ -61,61 +62,82 @@ export default function TeamPage({ params }) {
         setUser(JSON.parse(userData));
     }, [router]);
 
-    useEffect(() => {
+    const fetchRoomAndTeams = useCallback(async () => {
         if (!user) return;
 
-        const fetchData = async () => {
-            try {
-                // Fetch room status
-                const roomRes = await fetch(`/api/rooms/${roomCode}/status`);
-                const roomData = await roomRes.json();
-                if (roomData.success) setRoom(roomData.room);
+        try {
+            const roomRes = await fetch(`/api/rooms/${roomCode}/status`);
+            const roomData = await roomRes.json();
+            if (roomData.success) setRoom(roomData.room);
 
-                // Fetch teams
-                const teamsRes = await fetch(`/api/rooms/${roomCode}/teams?userId=${user._id}`);
-                const teamsData = await teamsRes.json();
-                if (teamsData.success) {
-                    setAllTeams(teamsData.teams);
-                    const me = teamsData.teams.find((t) => String(t.odid) === String(user._id));
-                    if (me) setMyData(me);
-                }
-                setLoading(false);
-            } catch (err) {
-                console.error(err);
-                setLoading(false);
+            const teamsRes = await fetch(`/api/rooms/${roomCode}/teams?userId=${user._id}`);
+            const teamsData = await teamsRes.json();
+            if (teamsData.success) {
+                setAllTeams(teamsData.teams);
+                const me = teamsData.teams.find((t) => String(t.odid) === String(user._id));
+                if (me) setMyData(me);
             }
-        };
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [roomCode, user]);
 
-        fetchData();
-        const interval = setInterval(fetchData, 3000);
-        return () => clearInterval(interval);
-    }, [user, roomCode]);
+    const fetchTeamSubmissions = useCallback(async () => {
+        if (!user) return;
+
+        try {
+            const res = await fetch(`/api/submissions/team?userId=${user._id}&roomCode=${roomCode}`);
+            const data = await res.json();
+            if (data.success) {
+                const map = {};
+                data.submissions.forEach((s) => {
+                    map[s.bugId?.bugId || s.bugId?.name || s.bugTitle] = s;
+                });
+                setSubmissions(map);
+            }
+        } catch (err) {
+            console.error("Failed to fetch submissions", err);
+        }
+    }, [roomCode, user]);
+
+    useEffect(() => {
+        if (!user) return;
+        fetchRoomAndTeams();
+    }, [fetchRoomAndTeams, user]);
 
     // Fetch team submissions when room is ENDED
     useEffect(() => {
         if (!user || !room) return;
+        fetchTeamSubmissions();
+    }, [fetchTeamSubmissions, room, user]);
 
-        const fetchSubmissions = async () => {
-            try {
-                const res = await fetch(`/api/submissions/team?userId=${user._id}&roomCode=${roomCode}`);
-                const data = await res.json();
-                if (data.success) {
-                    const map = {};
-                    data.submissions.forEach((s) => {
-                        // Key by the bug's string bugId (e.g. "BUG-001") or name
-                        map[s.bugId?.bugId || s.bugId?.name || s.bugTitle] = s;
-                    });
-                    setSubmissions(map);
-                }
-            } catch (err) {
-                console.error("Failed to fetch submissions", err);
-            }
+    useEffect(() => {
+        if (!user || !roomCode) return;
+
+        const refreshAll = () => {
+            fetchRoomAndTeams();
+            fetchTeamSubmissions();
         };
 
-        fetchSubmissions();
-        const interval = setInterval(fetchSubmissions, 5000);
-        return () => clearInterval(interval);
-    }, [user, room, roomCode]);
+        const channel = supabase
+            .channel(`room-${String(roomCode).toUpperCase()}`)
+            .on("broadcast", { event: "bugShown" }, refreshAll)
+            .on("broadcast", { event: "bugAllotted" }, refreshAll)
+            .on("broadcast", { event: "roomStatusChanged" }, refreshAll)
+            .on("broadcast", { event: "rebidStarted" }, refreshAll)
+            .on("broadcast", { event: "rebidPoolUpdated" }, refreshAll)
+            .on("broadcast", { event: "solutionSubmitted" }, refreshAll)
+            .on("broadcast", { event: "submissionScored" }, refreshAll)
+            .on("broadcast", { event: "powerCardShown" }, refreshAll)
+            .on("broadcast", { event: "powerCardAllotted" }, refreshAll)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchRoomAndTeams, fetchTeamSubmissions, roomCode, user]);
 
     const handleSubmit = async () => {
         if (!solutionCode.trim() || !submitModal) return;
@@ -165,7 +187,7 @@ export default function TeamPage({ params }) {
             const data = await res.json();
             if (data.success) {
                 alert(data.message);
-                // The interval fetch will update the UI
+                await fetchRoomAndTeams();
             } else {
                 alert(data.error);
             }

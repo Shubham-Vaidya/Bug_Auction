@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request, { params }) {
     try {
@@ -28,6 +29,10 @@ export async function POST(request, { params }) {
         // End the room
         room.status = "completed";
         await room.save();
+        await broadcastRoomEvent(room.roomId || roomCode, "roomStatusChanged", {
+            scope: "BUG",
+            status: room.status,
+        });
 
         // Mark all playing players as finished
         const now = new Date();

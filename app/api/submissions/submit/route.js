@@ -4,6 +4,7 @@ import Room from "@/models/Room";
 import Purchase from "@/models/Purchase";
 import Submission from "@/models/Submission";
 import Bug from "@/models/Bug";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request) {
     try {
@@ -142,6 +143,12 @@ export async function POST(request) {
         } else {
             console.log("DEBUG: Skipping Gemini review - No API Key found in process.env");
         }
+
+        await broadcastRoomEvent(room.roomId, "solutionSubmitted", {
+            submissionId: submission._id,
+            teamName: submission.teamName,
+            bugId: bug.bugId,
+        });
 
         return NextResponse.json({ success: true, message: "Solution processed. Gemini review updated.", submission });
     } catch (error) {

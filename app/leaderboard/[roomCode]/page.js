@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function LeaderboardPage({ params }) {
     const { roomCode } = use(params);
@@ -11,34 +12,51 @@ export default function LeaderboardPage({ params }) {
     const [loading, setLoading] = useState(true);
     const [profitMap, setProfitMap] = useState({});
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [roomRes, teamsRes] = await Promise.all([
-                    fetch(`/api/rooms/${roomCode}/status`),
-                    fetch(`/api/rooms/${roomCode}/teams`),
-                ]);
-                const roomData = await roomRes.json();
-                const teamsData = await teamsRes.json();
-                if (roomData.success) setRoom(roomData.room);
-                if (teamsData.success) setTeams(teamsData.teams);
+    const fetchData = useCallback(async () => {
+        try {
+            const [roomRes, teamsRes] = await Promise.all([
+                fetch(`/api/rooms/${roomCode}/status`),
+                fetch(`/api/rooms/${roomCode}/teams`),
+            ]);
+            const roomData = await roomRes.json();
+            const teamsData = await teamsRes.json();
+            if (roomData.success) setRoom(roomData.room);
+            if (teamsData.success) setTeams(teamsData.teams);
 
-                // Fetch submission profit data
-                const profitRes = await fetch(`/api/submissions/leaderboard?roomCode=${roomCode}`);
-                const profitData = await profitRes.json();
-                if (profitData.success) setProfitMap(profitData.profitMap || {});
-
-                setLoading(false);
-            } catch (err) {
-                console.error(err);
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-        const interval = setInterval(fetchData, 3000);
-        return () => clearInterval(interval);
+            const profitRes = await fetch(`/api/submissions/leaderboard?roomCode=${roomCode}`);
+            const profitData = await profitRes.json();
+            if (profitData.success) setProfitMap(profitData.profitMap || {});
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }, [roomCode]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    useEffect(() => {
+        if (!roomCode) return;
+
+        const channel = supabase
+            .channel(`room-${String(roomCode).toUpperCase()}`)
+            .on("broadcast", { event: "bugShown" }, fetchData)
+            .on("broadcast", { event: "bugAllotted" }, fetchData)
+            .on("broadcast", { event: "roomStatusChanged" }, fetchData)
+            .on("broadcast", { event: "rebidStarted" }, fetchData)
+            .on("broadcast", { event: "rebidPoolUpdated" }, fetchData)
+            .on("broadcast", { event: "solutionSubmitted" }, fetchData)
+            .on("broadcast", { event: "submissionScored" }, fetchData)
+            .on("broadcast", { event: "powerCardShown" }, fetchData)
+            .on("broadcast", { event: "powerCardAllotted" }, fetchData)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchData, roomCode]);
 
     const isEnded = room?.status === "ENDED";
 

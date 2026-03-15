@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import Rebid from "@/models/Rebid";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request) {
     try {
@@ -39,6 +40,14 @@ export async function POST(request) {
         // Update room's active bug
         room.activeBug = rebid.bugId;
         await room.save();
+
+        await broadcastRoomEvent(room.roomId, "rebidStarted", {
+            rebidId: rebid._id,
+            bugId: rebid.bugId,
+        });
+        await broadcastRoomEvent(room.roomId, "rebidPoolUpdated", {
+            rebidId: rebid._id,
+        });
 
         return NextResponse.json({ success: true, message: "Rebid bug is now live in auction" });
     } catch (error) {

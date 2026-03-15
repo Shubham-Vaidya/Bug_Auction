@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
 import Bug from "@/models/Bug";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request, { params }) {
     try {
@@ -53,6 +54,10 @@ export async function POST(request, { params }) {
         // Start the room
         room.status = "LIVE";
         await room.save();
+        await broadcastRoomEvent(room.roomId, "roomStatusChanged", {
+            scope: "BUG",
+            status: room.status,
+        });
 
         return NextResponse.json({
             success: true,

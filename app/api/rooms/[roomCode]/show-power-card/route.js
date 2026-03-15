@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import PowerCard from "@/models/PowerCard";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request, { params }) {
     try {
@@ -42,6 +43,10 @@ export async function POST(request, { params }) {
 
         room.activePowerCard = card._id;
         await room.save();
+        await broadcastRoomEvent(room.roomId, "powerCardShown", {
+            cardId: card.cardId,
+            cardName: card.name,
+        });
 
         return NextResponse.json({
             success: true,

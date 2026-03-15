@@ -6,6 +6,7 @@ import Purchase from "@/models/Purchase";
 import Submission from "@/models/Submission";
 import Rebid from "@/models/Rebid";
 import Bug from "@/models/Bug";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request) {
     try {
@@ -67,6 +68,12 @@ export async function POST(request) {
 
         // Delete purchase
         await Purchase.deleteOne({ _id: purchase._id });
+
+        await broadcastRoomEvent(room.roomId, "rebidPoolUpdated", {
+            bugId: bug.bugId,
+            previousTeamName: purchase.teamName,
+            refundAmount,
+        });
 
         return NextResponse.json({
             success: true,

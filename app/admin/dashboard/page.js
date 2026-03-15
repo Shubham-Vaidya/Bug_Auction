@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import BugDetailsModal from "@/components/BugDetailsModal";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -115,19 +116,61 @@ export default function AdminDashboard() {
         } catch (err) { console.error(err); }
     }, [selectedRoom]);
 
+    const fetchSelectedRoomState = useCallback(async () => {
+        if (!selectedRoom) return;
+        try {
+            const res = await fetch(`/api/rooms/${selectedRoom.roomId}/status`);
+            const data = await res.json();
+            if (data.success) {
+                setSelectedRoom((prev) => (prev ? { ...prev, ...data.room } : prev));
+                setAuctionPhase(data.room.status || "WAITING");
+                setPowerCardPhase(data.room.powerCardStatus || "WAITING");
+                setRebidStatus(data.room.rebiddingStatus || "INACTIVE");
+                setActiveBugId(data.room.activeBug?.bugId || null);
+                setActivePowerCardId(data.room.activePowerCard?.cardId || null);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }, [selectedRoom]);
+
     useEffect(() => { fetchRooms(); fetchBugs(); fetchPowerCards(); }, [fetchRooms, fetchBugs, fetchPowerCards]);
     useEffect(() => {
         if (!selectedRoom) return;
+        fetchSelectedRoomState();
         fetchTeams();
         fetchSubmissions();
         fetchRebidPool();
-        setRebidStatus(selectedRoom.rebiddingStatus || "INACTIVE");
-        setPowerCardPhase(selectedRoom.powerCardStatus || "WAITING");
-        setActiveBugId(selectedRoom.activeBug?.bugId || null);
-        setActivePowerCardId(selectedRoom.activePowerCard?.cardId || null);
-        const interval = setInterval(() => { fetchTeams(); fetchSubmissions(); fetchRebidPool(); }, 3000);
-        return () => clearInterval(interval);
-    }, [selectedRoom, fetchTeams, fetchSubmissions, fetchRebidPool]);
+    }, [selectedRoom, fetchSelectedRoomState, fetchTeams, fetchSubmissions, fetchRebidPool]);
+
+    useEffect(() => {
+        if (!selectedRoom?.roomId) return;
+
+        const refreshDashboard = () => {
+            fetchSelectedRoomState();
+            fetchTeams();
+            fetchSubmissions();
+            fetchRebidPool();
+            fetchRooms();
+        };
+
+        const channel = supabase
+            .channel(`room-${String(selectedRoom.roomId).toUpperCase()}`)
+            .on("broadcast", { event: "bugShown" }, refreshDashboard)
+            .on("broadcast", { event: "bugAllotted" }, refreshDashboard)
+            .on("broadcast", { event: "roomStatusChanged" }, refreshDashboard)
+            .on("broadcast", { event: "rebidStarted" }, refreshDashboard)
+            .on("broadcast", { event: "rebidPoolUpdated" }, refreshDashboard)
+            .on("broadcast", { event: "solutionSubmitted" }, refreshDashboard)
+            .on("broadcast", { event: "submissionScored" }, refreshDashboard)
+            .on("broadcast", { event: "powerCardShown" }, refreshDashboard)
+            .on("broadcast", { event: "powerCardAllotted" }, refreshDashboard)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [selectedRoom, fetchSelectedRoomState, fetchTeams, fetchSubmissions, fetchRebidPool, fetchRooms]);
 
     const handleCreateRoom = async () => {
         if (!roomName.trim()) return;

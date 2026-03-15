@@ -5,6 +5,7 @@ import RoomPlayer from "@/models/RoomPlayer";
 import Bug from "@/models/Bug";
 import Purchase from "@/models/Purchase";
 import Rebid from "@/models/Rebid";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request, { params }) {
     try {
@@ -96,6 +97,15 @@ export async function POST(request, { params }) {
             { bugId: bug._id, roomId: room._id, status: { $ne: "SOLD" } },
             { status: "SOLD" }
         );
+
+        await broadcastRoomEvent(room.roomId, "bugAllotted", {
+            bugId: bug.bugId,
+            teamName: updatedPlayer.teamName,
+            price: allotPrice,
+        });
+        await broadcastRoomEvent(room.roomId, "rebidPoolUpdated", {
+            bugId: bug.bugId,
+        });
 
         return NextResponse.json({
             success: true,

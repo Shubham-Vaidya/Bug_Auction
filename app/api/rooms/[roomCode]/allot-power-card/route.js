@@ -4,6 +4,7 @@ import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
 import PowerCard from "@/models/PowerCard";
 import PowerCardPurchase from "@/models/PowerCardPurchase";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request, { params }) {
     try {
@@ -63,6 +64,12 @@ export async function POST(request, { params }) {
             powerCardId: card._id,
             purchasePrice: allotPrice,
             teamName: player.teamName,
+        });
+
+        await broadcastRoomEvent(room.roomId, "powerCardAllotted", {
+            cardId: card.cardId,
+            teamName: player.teamName,
+            price: allotPrice,
         });
 
         return NextResponse.json({

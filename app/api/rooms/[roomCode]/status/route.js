@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function GET(request, { params }) {
     try {
@@ -75,6 +76,13 @@ export async function POST(request, { params }) {
             room.status = status;
         }
         await room.save();
+        await broadcastRoomEvent(room.roomId, "roomStatusChanged", {
+            scope,
+            status,
+            roomStatus: room.status,
+            powerCardStatus: room.powerCardStatus,
+            rebiddingStatus: room.rebiddingStatus,
+        });
 
         return NextResponse.json({ success: true, message: `${scope} status updated to ${status}` });
     } catch (error) {

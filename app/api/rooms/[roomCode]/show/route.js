@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import Bug from "@/models/Bug";
+import { broadcastRoomEvent } from "@/lib/realtime";
 
 export async function POST(request, { params }) {
     try {
@@ -39,6 +40,10 @@ export async function POST(request, { params }) {
         // Set activeBug — replaces any previously shown bug (one at a time)
         room.activeBug = bug._id;
         await room.save();
+        await broadcastRoomEvent(room.roomId, "bugShown", {
+            bugId: bug.bugId,
+            bugName: bug.name,
+        });
 
         return NextResponse.json({
             success: true,

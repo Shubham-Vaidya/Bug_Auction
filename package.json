@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.99.1",
     "mongoose": "^8.9.3",
     "next": "16.1.6",
     "react": "19.2.3",
