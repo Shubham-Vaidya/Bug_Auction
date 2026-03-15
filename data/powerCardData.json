@@ -1,50 +1,50 @@
 [
   {
     "cardId": "PC001",
-    "name": "Hint Surge",
-    "description": "Unlock one extra hint instantly for any one bug during solving.",
-    "marketValue": 300,
-    "rarity": "Common",
-    "tag": "🟦"
-  },
-  {
-    "cardId": "PC002",
-    "name": "Time Warp",
-    "description": "Gain 5 extra minutes for one selected submission.",
-    "marketValue": 450,
-    "rarity": "Rare",
-    "tag": "🟪"
-  },
-  {
-    "cardId": "PC003",
-    "name": "Rollback Shield",
-    "description": "Protect one scored submission from a penalty adjustment.",
-    "marketValue": 650,
-    "rarity": "Epic",
-    "tag": "🟧"
-  },
-  {
-    "cardId": "PC004",
-    "name": "Double Debug",
-    "description": "Submit two attempts for one bug and keep the better score.",
+    "name": "Gold Rush",
+    "description": "Ek solved bug ka profit double ho jata hai. High value bugs par use karna zyada beneficial hota hai.",
     "marketValue": 900,
     "rarity": "Legendary",
     "tag": "🟥"
   },
   {
+    "cardId": "PC002",
+    "name": "Insider Deal",
+    "description": "Auction ke time bug ki purchase price 40% kam ho jati hai. Isse team ka overall profit margin increase hota hai.",
+    "marketValue": 700,
+    "rarity": "Epic",
+    "tag": "🟧"
+  },
+  {
+    "cardId": "PC003",
+    "name": "Hostile Takeover",
+    "description": "Team dusri team se ek unsolved bug steal kar sakti hai. Ye card solving phase ke start mein use hota hai.",
+    "marketValue": 750,
+    "rarity": "Epic",
+    "tag": "🟧"
+  },
+  {
+    "cardId": "PC004",
+    "name": "Debug Vision",
+    "description": "Team admin se ek hint le sakti hai. Difficult bugs solve karne mein helpful hota hai.",
+    "marketValue": 450,
+    "rarity": "Rare",
+    "tag": "🟪"
+  },
+  {
     "cardId": "PC005",
-    "name": "Market Spy",
-    "description": "Preview one hidden bug detail before full reveal.",
-    "marketValue": 500,
+    "name": "System Freeze",
+    "description": "Team kisi dusri team ko 3 minutes ke liye freeze kar sakti hai. Freeze duration mein wo team answers submit nahi kar sakti.",
+    "marketValue": 650,
     "rarity": "Rare",
     "tag": "🟪"
   },
   {
     "cardId": "PC006",
-    "name": "Safety Net",
-    "description": "Recover 20% of purchase price on one failed submission.",
-    "marketValue": 700,
-    "rarity": "Epic",
-    "tag": "🟧"
+    "name": "Firewall",
+    "description": "Team ko protection milta hai bug stealing aur freeze attacks se. Protection duration 10 minutes hoti hai.",
+    "marketValue": 550,
+    "rarity": "Common",
+    "tag": "🟦"
   }
 ]

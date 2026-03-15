@@ -29,4 +29,7 @@ const PurchaseSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// A bug can only be allotted once per room.
+PurchaseSchema.index({ roomId: 1, bugId: 1 }, { unique: true });
+
 export default mongoose.models.Purchase || mongoose.model("Purchase", PurchaseSchema);

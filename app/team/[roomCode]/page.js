@@ -2,8 +2,38 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import CodeEditor from "@/components/CodeEditor";
+import PowerCard from "@/components/PowerCard";
 import BugDetailsModal from "@/components/BugDetailsModal";
+
+const panelCardClass = "rounded-2xl border border-white/20 bg-black/40 p-6 backdrop-blur-md sm:p-7";
+
+const badgeClass = {
+    live: "border-emerald-400/60 bg-emerald-400/15 text-emerald-200",
+    ended: "border-sky-400/60 bg-sky-400/15 text-sky-200",
+    waiting: "border-white/30 bg-white/10 text-slate-200",
+};
+
+const difficultyTextClass = {
+    Expert: "text-fuchsia-300",
+    Hard: "text-amber-300",
+    Medium: "text-sky-300",
+    Easy: "text-emerald-300",
+};
+
+const rarityTextClass = {
+    Legendary: "text-fuchsia-300",
+    Epic: "text-amber-300",
+    Rare: "text-sky-300",
+    Common: "text-emerald-300",
+};
+
+const liveBadgeTone = (status, powerCardStatus) => {
+    if (powerCardStatus === "LIVE" || status === "LIVE") return badgeClass.live;
+    if (powerCardStatus === "ENDED" || status === "ENDED") return badgeClass.ended;
+    return badgeClass.waiting;
+};
 
 export default function TeamPage({ params }) {
     const { roomCode } = use(params);
@@ -22,6 +52,8 @@ export default function TeamPage({ params }) {
     const [submitting, setSubmitting] = useState(false);
     const [submitMsg, setSubmitMsg] = useState("");
     const [viewingBug, setViewingBug] = useState(null);
+    const [openCodeBugId, setOpenCodeBugId] = useState(null);
+    const [selectedCodeLangByBug, setSelectedCodeLangByBug] = useState({});
 
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -40,11 +72,11 @@ export default function TeamPage({ params }) {
                 if (roomData.success) setRoom(roomData.room);
 
                 // Fetch teams
-                const teamsRes = await fetch(`/api/rooms/${roomCode}/teams`);
+                const teamsRes = await fetch(`/api/rooms/${roomCode}/teams?userId=${user._id}`);
                 const teamsData = await teamsRes.json();
                 if (teamsData.success) {
                     setAllTeams(teamsData.teams);
-                    const me = teamsData.teams.find((t) => t.odid === user._id);
+                    const me = teamsData.teams.find((t) => String(t.odid) === String(user._id));
                     if (me) setMyData(me);
                 }
                 setLoading(false);
@@ -61,7 +93,7 @@ export default function TeamPage({ params }) {
 
     // Fetch team submissions when room is ENDED
     useEffect(() => {
-        if (!user || !room || room.status !== "ENDED") return;
+        if (!user || !room) return;
 
         const fetchSubmissions = async () => {
             try {
@@ -70,8 +102,8 @@ export default function TeamPage({ params }) {
                 if (data.success) {
                     const map = {};
                     data.submissions.forEach((s) => {
-                        // Key by the bug's string bugId (e.g. "BUG-001")
-                        map[s.bugId?.bugId || s.bugTitle] = s;
+                        // Key by the bug's string bugId (e.g. "BUG-001") or name
+                        map[s.bugId?.bugId || s.bugId?.name || s.bugTitle] = s;
                     });
                     setSubmissions(map);
                 }
@@ -109,7 +141,7 @@ export default function TeamPage({ params }) {
                 const d = await r.json();
                 if (d.success) {
                     const map = {};
-                    d.submissions.forEach((s) => { map[s.bugId?.bugId || s.bugTitle] = s; });
+                    d.submissions.forEach((s) => { map[s.bugId?.bugId || s.bugId?.name || s.bugTitle] = s; });
                     setSubmissions(map);
                 }
                 setTimeout(() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }, 1500);
@@ -145,8 +177,12 @@ export default function TeamPage({ params }) {
 
     if (loading) {
         return (
-            <div className="screen-center">
-                <div className="text-sec" style={{ fontSize: '1.2rem' }}>Connecting to arena...</div>
+            <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black text-white">
+                <Image src="/TeamBackground.png" alt="Team arena background" fill className="object-cover" priority />
+                <div className="absolute inset-0 bg-black/60" />
+                <div className="relative z-10 rounded-2xl border border-white/20 bg-black/40 px-6 py-4 text-xl tracking-wide backdrop-blur-md sm:text-2xl">
+                    Connecting to arena...
+                </div>
             </div>
         );
     }
@@ -159,128 +195,134 @@ export default function TeamPage({ params }) {
     const isEnded = room?.status === "ENDED";
 
     return (
-        <>
-            {/* Top Bar */}
-            <div className="top-bar">
-                <div className="top-bar-title neon-purple">👥 TEAM UPLINK</div>
-                <div className="top-bar-center">
-                    <div className="room-chip" style={{ borderColor: 'var(--neon-purple)', background: 'rgba(188,19,254,0.06)', color: 'var(--neon-purple)' }}>
-                        <div className="room-chip-dot" style={{ background: 'var(--neon-purple)', boxShadow: '0 0 8px var(--neon-purple)' }}></div>
-                        {roomCode}
-                    </div>
-                    {room && (
-                        <span className={`badge ${room.powerCardStatus === 'LIVE' || room.status === 'LIVE' ? 'badge-green' : room.powerCardStatus === 'ENDED' ? 'badge-blue' : room.status === 'ENDED' ? 'badge-blue' : 'badge-gray'}`}>
-                            {room.powerCardStatus === 'LIVE' ? 'POWER LIVE' : room.powerCardStatus === 'ENDED' ? 'POWER ENDED' : room.status}
-                        </span>
-                    )}
-                </div>
-                <div className="btn-row">
-                    {myData && (
-                        <div className="badge badge-green" style={{ padding: '8px 16px', fontSize: '0.7rem' }}>{myData.teamName}</div>
-                    )}
-                    <button className="btn btn-purple btn-sm" onClick={() => router.push("/")}>DISCONNECT</button>
+        <div className="relative min-h-screen text-white">
+            <div className="fixed inset-0 z-0 h-screen overflow-hidden">
+                <div className="relative h-full w-full">
+                    <Image src="/TeamBackground.png" alt="Team arena background" fill className="object-cover" priority />
+                    <div className="absolute inset-0 bg-black/60" />
+
+                    <Image
+                        src="/Character2.png"
+                        alt="Character"
+                        width={300}
+                        height={460}
+                        className="pointer-events-none absolute right-0 bottom-1 z-10 hidden w-48 select-none drop-shadow-2xl md:block lg:w-56 xl:w-72"
+                        priority
+                    />
                 </div>
             </div>
 
-            <div className="page">
-                {/* Wallet */}
+            <div className="relative z-20 mx-auto w-screen px-4 py-4 sm:px-6 lg:pr-64 lg:pl-8 xl:pr-80">
+                <div className="mb-6 rounded-2xl border border-white/20 bg-black/40 px-4 py-5 backdrop-blur-md sm:px-6">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">Hunter Control Panel</div>
+                        <div className="flex items-center gap-2 self-start rounded-full border border-white/20 bg-black/40 px-4 py-2 text-sm font-semibold tracking-[0.08em] text-slate-100 sm:self-auto sm:text-base">
+                            AREA-5YMC
+                        </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <div className="text-3xl font-semibold leading-none text-white sm:text-4xl">HOPES</div>
+                            {myData && (
+                                <div className="rounded-full border border-emerald-400/60 bg-emerald-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.06em] text-emerald-200">
+                                    {myData.teamName}
+                                </div>
+                            )}
+                            <button
+                                className="rounded-lg border border-yellow-300/60 bg-yellow-400 px-4 py-2 text-sm font-bold uppercase tracking-[0.05em] text-black transition hover:bg-yellow-300"
+                                onClick={() => router.push("/")}
+                            >
+                                DISCONNECT
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/60 bg-fuchsia-400/10 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.06em] text-fuchsia-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-300" />
+                            {roomCode}
+                        </div>
+                        {room && (
+                            <span className={`rounded-full border px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.06em] ${liveBadgeTone(room.status, room.powerCardStatus)}`}>
+                                {room.powerCardStatus === "LIVE" ? "POWER LIVE" : room.powerCardStatus === "ENDED" ? "POWER ENDED" : room.status}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
                 {myData && (
-                    <div style={{ marginBottom: '32px' }}>
-                        <div className="card wallet-card border-green" style={{ display: 'inline-flex' }}>
-                            <div className="wallet-icon">💰</div>
-                            <div>
-                                <div className="wallet-label">Wallet Balance</div>
-                                <div className="wallet-value neon-green">₹{myData.coins?.toLocaleString()}</div>
-                            </div>
+                    <div className="mb-6 inline-flex items-center gap-4 rounded-2xl border border-emerald-300/40 bg-black/40 px-6 py-5 backdrop-blur-md">
+                        <Image src="/currency.png" alt="Currency" width={80} height={80} className="h-20 w-20 object-contain" />
+                        <div>
+                            <div className="text-sm uppercase tracking-[0.06em] text-slate-300">Wallet Balance</div>
+                            <div className="text-4xl font-semibold leading-none text-emerald-300 sm:text-5xl">₹{myData.coins?.toLocaleString()}</div>
                         </div>
                     </div>
                 )}
 
-                <div className="auction-team-layout">
-                    {/* Left: Live Bug + Team Portfolio (Purchased Bugs) */}
-                    <div className="panel">
-                        {/* LIVE BUG Section */}
-                        <div className="card" style={{ marginBottom: '4px', border: 'none', boxShadow: 'none' }}>
-                            <div className="panel-title underline-blue">Live Auction</div>
-                            <h3 className="orbitron mb-20 neon-blue" style={{ fontSize: '1rem' }}>LIVE BUG</h3>
+                <div className="grid gap-6 lg:grid-cols-12">
+                    <div className="space-y-5 lg:col-span-8">
+                        <div className={panelCardClass}>
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-sky-300/50">Live Auction</div>
+                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-sky-300 sm:text-3xl">LIVE BUG</h3>
 
-                            {(room?.activeBug && (room.status === "LIVE" || room.rebiddingStatus === "AUCTION")) ? (() => {
+                            {room?.activeBug && (room.status === "LIVE" || room.rebiddingStatus === "AUCTION") ? (() => {
                                 const ab = room.activeBug;
-                                const diffColor = ab.difficulty === "Expert" ? "neon-purple" : ab.difficulty === "Hard" ? "neon-amber" : ab.difficulty === "Medium" ? "neon-blue" : "neon-green";
                                 return (
                                     <div
-                                        className="bug-card"
-                                        style={{ marginBottom: 0, border: '1px solid rgba(0,242,255,0.35)', background: 'rgba(0,242,255,0.04)', cursor: 'pointer' }}
-                                        onClick={() => setViewingBug(ab)}
+                                        className="cursor-pointer rounded-xl border border-sky-300/40 bg-sky-400/10 p-3 sm:p-4"
+                                        onClick={() => setViewingBug({ ...ab, showFull: false })}
                                     >
-                                        <div className="bug-card-id">BUG ID: {ab.bugId} &nbsp; {ab.tag}</div>
-                                        <div className="bug-card-name">{ab.name}</div>
-                                        <div className="text-xs text-sec mb-12">
+                                        <div className="text-xs uppercase tracking-widest text-slate-500">BUG ID: {ab.bugId} {ab.tag}</div>
+                                        <div className="mt-1 text-xl font-bold text-white">{ab.name}</div>
+                                        <div className="mt-2 text-sm text-slate-300">
                                             {ab.description?.includes("PREVIEW:") ? ab.description.split("FULL:")[0].replace("PREVIEW:", "").trim() : ab.description}
                                         </div>
-                                        <div className="bug-card-meta">
-                                            <div className="bug-meta-item">
-                                                <span className="bug-meta-label">Market Value</span>
-                                                <span className="bug-meta-value neon-green">₹{ab.marketValue?.toLocaleString()}</span>
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                            <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                                <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Market Value</div>
+                                                <div className="text-lg font-semibold text-emerald-300">₹{ab.marketValue?.toLocaleString()}</div>
                                             </div>
-                                            <div className="bug-meta-item">
-                                                <span className="bug-meta-label">Difficulty</span>
-                                                <span className={`bug-meta-value ${diffColor}`}>{ab.difficulty}</span>
+                                            <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                                <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Difficulty</div>
+                                                <div className={`text-lg font-semibold ${difficultyTextClass[ab.difficulty] || "text-emerald-300"}`}>{ab.difficulty}</div>
                                             </div>
                                         </div>
-                                        <div className="mt-12 text-center">
-                                            <span className="text-xs neon-blue" style={{ letterSpacing: '2px' }}>[ ANALYSIS PREVIEW ]</span>
-                                        </div>
+                                        <div className="mt-3 text-center text-sm font-semibold uppercase tracking-[0.05em] text-sky-200">[ ANALYSIS PREVIEW ]</div>
                                     </div>
                                 );
                             })() : (
-                                <div className="text-center" style={{ padding: '32px 20px' }}>
-                                    <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>🔍</div>
-                                    <div className="text-sec" style={{ fontSize: '0.85rem' }}>
+                                <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-8 text-center">
+                                    <div className="mb-2 text-2xl">🔍</div>
+                                    <div className="text-base text-slate-200">
                                         {room?.rebiddingStatus === "ACCEPTING" ? "Rebidding phase active. You can sell bugs now." :
                                             room?.rebiddingStatus === "AUCTION" ? "Rebidding auction is live!" :
                                                 room?.powerCardStatus === "LIVE" ? "Power card auction is live below." :
-                                                isEnded ? "Auction has ended." : "Waiting for admin to reveal a bug..."}
+                                                    isEnded ? "Auction has ended." : "Waiting for admin to reveal a bug..."}
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* LIVE POWER CARD Section */}
-                        <div className="card" style={{ marginBottom: '16px', border: 'none', boxShadow: 'none' }}>
-                            <div className="panel-title underline-blue">Live Auction</div>
-                            <h3 className="orbitron mb-20 neon-green" style={{ fontSize: '1rem' }}>LIVE POWER CARD</h3>
+                        <div className={panelCardClass}>
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-emerald-300/50">Live Auction</div>
+                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-emerald-300 sm:text-3xl">LIVE POWER CARD</h3>
 
-                            {(room?.activePowerCard && room.powerCardStatus === "LIVE") ? (() => {
+                            {room?.activePowerCard && room.powerCardStatus === "LIVE" ? (() => {
                                 const pc = room.activePowerCard;
-                                const rarityColor = pc.rarity === "Legendary" ? "neon-purple" : pc.rarity === "Epic" ? "neon-amber" : pc.rarity === "Rare" ? "neon-blue" : "neon-green";
                                 return (
-                                    <div
-                                        className="bug-card"
-                                        style={{ marginBottom: 0, border: '1px solid rgba(0,255,65,0.35)', background: 'rgba(0,255,65,0.04)' }}
-                                    >
-                                        <div className="bug-card-id">POWER CARD: {pc.cardId} &nbsp; {pc.tag}</div>
-                                        <div className="bug-card-name">{pc.name}</div>
-                                        <div className="text-xs text-sec mb-12">{pc.description}</div>
-                                        <div className="bug-card-meta">
-                                            <div className="bug-meta-item">
-                                                <span className="bug-meta-label">Market Value</span>
-                                                <span className="bug-meta-value neon-green">₹{pc.marketValue?.toLocaleString()}</span>
-                                            </div>
-                                            <div className="bug-meta-item">
-                                                <span className="bug-meta-label">Rarity</span>
-                                                <span className={`bug-meta-value ${rarityColor}`}>{pc.rarity}</span>
-                                            </div>
-                                        </div>
-                                        <div className="mt-12 text-center">
-                                            <span className="text-xs neon-green" style={{ letterSpacing: '2px' }}>[ POWER CARD AUCTION LIVE ]</span>
-                                        </div>
+                                    <div className="max-w-md">
+                                        <PowerCard 
+                                            card={pc} 
+                                            onClick={(c) => {
+                                                // Handle purchase via existing logic if any, 
+                                                // or just provide feedback if it's strictly admin-allotted.
+                                                alert(`Requesting purchase of ${c.name} (₹${c.marketValue})`);
+                                            }}
+                                        />
                                     </div>
                                 );
                             })() : (
-                                <div className="text-center" style={{ padding: '24px 20px' }}>
-                                    <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>⚡</div>
-                                    <div className="text-sec" style={{ fontSize: '0.85rem' }}>
+                                <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-8 text-center">
+                                    <div className="mb-2 text-2xl">⚡</div>
+                                    <div className="text-base text-slate-200">
                                         {room?.status !== "ENDED"
                                             ? "Power card auction will unlock after bug auction ends."
                                             : room?.powerCardStatus === "WAITING"
@@ -293,54 +335,104 @@ export default function TeamPage({ params }) {
                             )}
                         </div>
 
-                        {/* BUGS ACQUIRED Section */}
-                        <div className="card border-purple pulse-purple">
-                            <div className="panel-title">Your Portfolio</div>
-                            <h3 className="orbitron mb-24" style={{ fontSize: '1rem' }}>BUGS ACQUIRED</h3>
+                        <div className={panelCardClass}>
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-fuchsia-300/50">Your Portfolio</div>
+                            <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-fuchsia-300 sm:text-3xl">MY TEAM PORTFOLIO</h3>
 
                             {!myData || myData.purchases?.length === 0 ? (
-                                <div className="text-center" style={{ padding: '40px 20px' }}>
-                                    <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🕐</div>
-                                    <div className="text-sec">No bugs acquired yet. Wait for admin to allot bugs from the auction.</div>
+                                <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-10 text-center">
+                                    <div className="mb-2 text-3xl">🕐</div>
+                                    <div className="text-base text-slate-200">No bugs acquired yet. Wait for admin to allot bugs from the auction.</div>
                                 </div>
                             ) : (
-                                myData.purchases?.map((p, i) => {
-                                    const diffColor = p.difficulty === "Expert" ? "neon-purple" : p.difficulty === "Hard" ? "neon-amber" : p.difficulty === "Medium" ? "neon-blue" : "neon-green";
-                                    // Find submission by matching bugId string (e.g. "BUG-001")
-                                    const submissionEntry = submissions[p.bugId];
+                                <div className="space-y-3">
+                                    {myData.purchases?.map((p, i) => {
+                                        const submissionEntry = submissions[p.bugId];
+                                        const codeLanguages = Object.keys(p.languageVersions || {});
+                                        const selectedCodeLanguage = selectedCodeLangByBug[p.bugId] || codeLanguages[0];
+                                        const selectedBuggyCode = selectedCodeLanguage ? p.languageVersions?.[selectedCodeLanguage] : "";
+                                        const isCodeOpen = openCodeBugId === p.bugId;
 
-                                    return (
-                                        <div key={i} className="bug-card" style={{ marginBottom: '16px', cursor: 'pointer' }} onClick={() => setViewingBug(p)}>
-                                            <div className="bug-card-id">{p.bugId} {p.tag}</div>
-                                            <div className="bug-card-name">{p.bugName}</div>
-                                            <div className="text-xs text-sec mt-8 mb-12">
-                                                {!isEnded ? (
-                                                    p.description?.includes("PREVIEW:") ? p.description.split("FULL:")[0].replace("PREVIEW:", "").trim() : p.description
-                                                ) : (
-                                                    <span className="neon-green" style={{ fontSize: '0.65rem' }}>🔓 DATA DECRYPTED — CLICK TO VIEW</span>
-                                                )}
-                                            </div>
-                                            <div className="bug-card-meta">
-                                                <div className="bug-meta-item">
-                                                    <span className="bug-meta-label">Price Paid</span>
-                                                    <span className="bug-meta-value neon-green">₹{p.price?.toLocaleString()}</span>
+                                        return (
+                                            <div
+                                                key={i}
+                                                className="cursor-pointer rounded-xl border border-white/25 bg-black/35 p-3 sm:p-4"
+                                                onClick={() => setViewingBug({ ...p, showFull: true })}
+                                            >
+                                                <div className="text-xs uppercase tracking-widest text-slate-500">{p.bugId} {p.tag}</div>
+                                                <div className="mt-1 text-xl font-bold text-white">{p.bugName}</div>
+                                                <div className="mt-2 text-sm text-slate-300">
+                                                    {!isEnded ? (
+                                                        p.description?.includes("PREVIEW:") ? p.description.split("FULL:")[0].replace("PREVIEW:", "").trim() : p.description
+                                                    ) : (
+                                                        <span className="text-sm font-semibold uppercase tracking-[0.05em] text-emerald-300">🔓 DATA DECRYPTED — CLICK TO VIEW</span>
+                                                    )}
                                                 </div>
-                                                <div className="bug-meta-item">
-                                                    <span className="bug-meta-label">Difficulty</span>
-                                                    <span className={`bug-meta-value ${diffColor}`}>{p.difficulty}</span>
+                                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                    <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                                        <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Price Paid</div>
+                                                        <div className="text-lg font-semibold text-emerald-300">₹{p.price?.toLocaleString()}</div>
+                                                    </div>
+                                                    <div className="rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                                        <div className="text-sm uppercase tracking-[0.05em] text-slate-300">Difficulty</div>
+                                                        <div className={`text-lg font-semibold ${difficultyTextClass[p.difficulty] || "text-emerald-300"}`}>{p.difficulty}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Submission Status + Score/Profit */}
-                                            {isEnded && (
-                                                <div
-                                                    style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
+                                                <div className="mt-3 border-t border-white/20 pt-3" onClick={(e) => e.stopPropagation()}>
+                                                    <button
+                                                        className="w-full rounded-full border border-fuchsia-300/50 bg-fuchsia-400/15 px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.05em] text-fuchsia-100 transition hover:bg-fuchsia-400/30"
+                                                        onClick={() => {
+                                                            if (isCodeOpen) {
+                                                                setOpenCodeBugId(null);
+                                                                return;
+                                                            }
+                                                            if (codeLanguages.length > 0) {
+                                                                setOpenCodeBugId(p.bugId);
+                                                                setSelectedCodeLangByBug((prev) => ({
+                                                                    ...prev,
+                                                                    [p.bugId]: prev[p.bugId] || codeLanguages[0],
+                                                                }));
+                                                            }
+                                                        }}
+                                                        disabled={codeLanguages.length === 0}
+                                                    >
+                                                        {codeLanguages.length === 0
+                                                            ? "⛔ BUGGY CODE NOT AVAILABLE"
+                                                            : isCodeOpen
+                                                                ? "🔽 HIDE BUGGY CODE"
+                                                                : "🔓 VIEW BUGGY CODE"}
+                                                    </button>
+
+                                                    {isCodeOpen && codeLanguages.length > 0 && (
+                                                        <div className="mt-3 rounded-xl border border-white/20 bg-black/30 p-3">
+                                                            <div className="mb-2 flex flex-wrap gap-2">
+                                                                {codeLanguages.map((lang) => (
+                                                                    <button
+                                                                        key={lang}
+                                                                        type="button"
+                                                                        className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.05em] ${selectedCodeLanguage === lang
+                                                                            ? "border-emerald-300/60 bg-emerald-400/20 text-emerald-100"
+                                                                            : "border-white/25 bg-white/5 text-slate-200"
+                                                                            }`}
+                                                                        onClick={() => setSelectedCodeLangByBug((prev) => ({ ...prev, [p.bugId]: lang }))}
+                                                                    >
+                                                                        {lang}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+
+                                                            <pre className="max-h-80 overflow-auto rounded-lg border border-emerald-300/30 bg-black/60 p-3 text-xs leading-relaxed text-emerald-200">
+                                                                {selectedBuggyCode}
+                                                            </pre>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-3 border-t border-white/20 pt-3" onClick={(e) => e.stopPropagation()}>
                                                     {!submissionEntry ? (
                                                         <button
-                                                            className="btn btn-blue btn-sm"
-                                                            style={{ width: '100%' }}
+                                                            className="w-full rounded-full border border-sky-300/50 bg-sky-400/20 px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.05em] text-sky-100 transition hover:bg-sky-400/30"
                                                             onClick={() => {
                                                                 setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
                                                                 setSolutionCode("");
@@ -350,153 +442,144 @@ export default function TeamPage({ params }) {
                                                             📤 SUBMIT SOLUTION
                                                         </button>
                                                     ) : submissionEntry.status === "pending" ? (
-                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                                            <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>⏳ SUBMITTED — AWAITING SCORE</span>
+                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                            <span className="rounded-full border border-amber-300/60 bg-amber-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-amber-100">⏳ SUBMITTED — AWAITING SCORE</span>
                                                             <button
-                                                                className="btn btn-blue btn-sm"
+                                                                className="rounded-full border border-sky-300/50 bg-sky-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-sky-100 transition hover:bg-sky-400/30"
                                                                 onClick={() => {
                                                                     setSubmitModal({ bugId: p.bugId, bugStringId: p.bugId, bugName: p.bugName, purchasePrice: p.price });
                                                                     setSolutionCode(submissionEntry.solutionCode || "");
                                                                     setSubmitMsg("");
                                                                 }}
-                                                                style={{ fontSize: '0.65rem', padding: '4px 10px' }}
                                                             >
                                                                 ✏️ Edit
                                                             </button>
                                                         </div>
                                                     ) : (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                <span className="bug-meta-label">Admin Score</span>
-                                                                <span className="bug-meta-value neon-purple">{submissionEntry.adminScore} pts</span>
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="uppercase tracking-[0.05em] text-slate-300">Admin Score</span>
+                                                                <span className="font-semibold text-fuchsia-300">{submissionEntry.adminScore} pts</span>
                                                             </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                <span className="bug-meta-label">Profit</span>
-                                                                <span className={`bug-meta-value ${submissionEntry.profit >= 0 ? 'neon-green' : 'neon-amber'}`}>
-                                                                    {submissionEntry.profit >= 0 ? '+' : ''}₹{submissionEntry.profit?.toLocaleString()}
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="uppercase tracking-[0.05em] text-slate-300">Profit</span>
+                                                                <span className={`font-semibold ${submissionEntry.profit >= 0 ? "text-emerald-300" : "text-amber-300"}`}>
+                                                                    {submissionEntry.profit >= 0 ? "+" : ""}₹{submissionEntry.profit?.toLocaleString()}
                                                                 </span>
                                                             </div>
-                                                            <span className="badge badge-green" style={{ fontSize: '0.62rem', alignSelf: 'flex-start' }}>✅ SCORED</span>
+                                                            <span className="inline-flex rounded-full border border-emerald-300/60 bg-emerald-400/20 px-3 py-1.5 text-sm font-semibold uppercase tracking-[0.05em] text-emerald-100">✅ SCORED</span>
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
 
-                                            {/* Rebidding Action */}
-                                            {room?.rebiddingStatus === "ACCEPTING" && !submissionEntry && (
-                                                <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
-                                                    <button
-                                                        className="btn btn-amber btn-sm"
-                                                        style={{ width: '100%', fontSize: '0.65rem', boxShadow: '0 0 10px rgba(255, 191, 0, 0.3)' }}
-                                                        onClick={(e) => { e.stopPropagation(); handleSellForRebid(p.bugId, p.price); }}
-                                                    >
-                                                        ♻️ SELL FOR REBID (₹{p.price?.toLocaleString()} Refund)
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-
-                        {/* POWER CARDS ACQUIRED Section */}
-                        <div className="card border-green" style={{ marginTop: '16px' }}>
-                            <div className="panel-title">Your Power Cards</div>
-                            <h3 className="orbitron mb-24" style={{ fontSize: '1rem' }}>POWER PORTFOLIO</h3>
-
-                            {!myData || myData.powerCardPurchases?.length === 0 ? (
-                                <div className="text-center" style={{ padding: '28px 20px' }}>
-                                    <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>⚡</div>
-                                    <div className="text-sec">No power cards purchased yet.</div>
-                                </div>
-                            ) : (
-                                myData.powerCardPurchases?.map((pc, i) => {
-                                    const rarityColor = pc.rarity === "Legendary" ? "neon-purple" : pc.rarity === "Epic" ? "neon-amber" : pc.rarity === "Rare" ? "neon-blue" : "neon-green";
-                                    return (
-                                        <div key={`${pc.cardId}-${i}`} className="bug-card" style={{ marginBottom: '12px' }}>
-                                            <div className="bug-card-id">{pc.cardId} {pc.tag}</div>
-                                            <div className="bug-card-name">{pc.cardName}</div>
-                                            <div className="text-xs text-sec mt-8 mb-12">{pc.description}</div>
-                                            <div className="bug-card-meta">
-                                                <div className="bug-meta-item">
-                                                    <span className="bug-meta-label">Price Paid</span>
-                                                    <span className="bug-meta-value neon-green">₹{pc.price?.toLocaleString()}</span>
-                                                </div>
-                                                <div className="bug-meta-item">
-                                                    <span className="bug-meta-label">Rarity</span>
-                                                    <span className={`bug-meta-value ${rarityColor}`}>{pc.rarity}</span>
-                                                </div>
+                                                {room?.rebiddingStatus === "ACCEPTING" && !submissionEntry && (
+                                                    <div className="mt-3 border-t border-white/20 pt-3">
+                                                        <button
+                                                            className="w-full rounded-full border border-amber-300/60 bg-amber-400/20 px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.05em] text-amber-100 transition hover:bg-amber-400/30"
+                                                            onClick={(e) => { e.stopPropagation(); handleSellForRebid(p.bugId, p.price); }}
+                                                        >
+                                                            ♻️ SELL FOR REBID (₹{p.price?.toLocaleString()} Refund)
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    );
-                                })
+                                        );
+                                    })}
+                                </div>
                             )}
+
+                            {/* POWER UPS SECTION */}
+                            <div className="mt-8">
+                                <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-yellow-300/50">Tactical Arsenal</div>
+                                <h3 className="mb-5 text-2xl font-bold uppercase tracking-wide text-yellow-300 sm:text-3xl">POWER UPS</h3>
+                                
+                                {(!myData || !myData.powerCardPurchases || myData.powerCardPurchases.length === 0) ? (
+                                    <div className="rounded-xl border border-white/15 bg-black/25 px-4 py-8 text-center">
+                                        <div className="text-sm text-slate-400">No power cards owned yet.</div>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {myData.powerCardPurchases.map((pc, idx) => (
+                                            <PowerCard 
+                                                key={idx} 
+                                                card={{
+                                                    ...pc,
+                                                    name: pc.cardName,
+                                                    marketValue: pc.price
+                                                }} 
+                                                showAction={false} 
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
+
+
                     </div>
 
-
-                    {/* Right: Leaderboard + Stats */}
-                    <div className="panel">
-                        <div className="card border-white-subtle">
-                            <div className="panel-title mb-16" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>Live Rankings</div>
-                            {leaderboard.map((t, i) => {
-                                const isMe = t.odid === user?._id;
-                                const rankEmoji = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
-                                return (
-                                    <div key={t._id} className="team-item" style={isMe ? { border: '1px solid var(--neon-purple)', background: 'rgba(188,19,254,0.06)' } : {}}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ fontSize: '1.1rem', width: '30px' }}>{rankEmoji}</span>
-                                            <div>
-                                                <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>
-                                                    {t.teamName} {isMe && <span className="neon-purple" style={{ fontSize: '0.7rem' }}>(YOU)</span>}
-                                                </div>
-                                                <div className="text-xs text-sec">
-                                                    {t.bugsWon} bugs · ₹{t.coins?.toLocaleString()} remaining
+                    <div className="space-y-5 lg:col-span-4">
+                        <div className={panelCardClass}>
+                            <div className="mb-4 border-b border-white/20 pb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Live Rankings</div>
+                            <div className="space-y-2.5">
+                                {leaderboard.map((t, i) => {
+                                    const isMe = String(t.odid) === String(user?._id);
+                                    const rankEmoji = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`;
+                                    return (
+                                        <div
+                                            key={t._id}
+                                            className={`flex items-center justify-between rounded-xl border p-3 ${isMe ? "border-fuchsia-300/50 bg-fuchsia-400/15" : "border-white/20 bg-black/30"}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-8 text-center text-lg">{rankEmoji}</span>
+                                                <div>
+                                                    <div className="text-base font-semibold text-white sm:text-lg">
+                                                        {t.teamName} {isMe && <span className="text-sm uppercase tracking-[0.05em] text-fuchsia-200">(YOU)</span>}
+                                                    </div>
+                                                    <div className="text-sm text-slate-300">{t.bugsWon} bugs · ₹{t.coins?.toLocaleString()} remaining</div>
                                                 </div>
                                             </div>
+                                            <span className="rounded-full border border-emerald-300/60 bg-emerald-400/20 px-2.5 py-1 text-sm font-semibold uppercase tracking-[0.05em] text-emerald-100">
+                                                {t.status}
+                                            </span>
                                         </div>
-                                        <span className="badge badge-green">{t.status}</span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
 
-                        {/* Team Stats */}
                         {myData && (
-                            <div className="card border-white-subtle">
-                                <div className="panel-title mb-16" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>Your Stats</div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                    <div className="stats-row-item">
-                                        <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>TEAM</span>
-                                        <span className="font-bold orbitron neon-blue" style={{ fontSize: '0.9rem' }}>{myData.teamName}</span>
+                            <div className={panelCardClass}>
+                                <div className="mb-4 border-b border-white/20 pb-3 text-xs font-bold uppercase tracking-widest text-slate-400">Your Stats</div>
+                                <div className="space-y-2.5 text-base">
+                                    <div className="flex items-center justify-between rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                        <span className="text-sm uppercase tracking-[0.05em] text-slate-300">TEAM</span>
+                                        <span className="font-semibold text-sky-300">{myData.teamName}</span>
                                     </div>
-                                    <div className="stats-row-item">
-                                        <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>WALLET</span>
-                                        <span className="orbitron neon-green">₹{myData.coins?.toLocaleString()}</span>
+                                    <div className="flex items-center justify-between rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                        <span className="text-sm uppercase tracking-[0.05em] text-slate-300">WALLET</span>
+                                        <span className="font-semibold text-emerald-300">₹{myData.coins?.toLocaleString()}</span>
                                     </div>
-                                    <div className="stats-row-item">
-                                        <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>BUGS WON</span>
-                                        <span className="orbitron neon-purple">{myData.bugsWon}</span>
+                                    <div className="flex items-center justify-between rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                        <span className="text-sm uppercase tracking-[0.05em] text-slate-300">BUGS WON</span>
+                                        <span className="font-semibold text-fuchsia-300">{myData.bugsWon}</span>
                                     </div>
-                                    <div className="stats-row-item">
-                                        <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>POWER CARDS</span>
-                                        <span className="orbitron neon-green">{myData.powerCardPurchases?.length || 0}</span>
+                                    <div className="flex items-center justify-between rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                        <span className="text-sm uppercase tracking-[0.05em] text-slate-300">POWER CARDS</span>
+                                        <span className="font-semibold text-emerald-300">{myData.powerCardPurchases?.length || 0}</span>
                                     </div>
-                                    <div className="stats-row-item">
-                                        <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>ROOM</span>
-                                        <span className="mono neon-amber" style={{ fontSize: '0.82rem' }}>{room?.roomId || roomCode}</span>
+                                    <div className="flex items-center justify-between rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                        <span className="text-sm uppercase tracking-[0.05em] text-slate-300">ROOM</span>
+                                        <span className="font-semibold text-amber-300">{room?.roomId || roomCode}</span>
                                     </div>
-                                    {/* Profit summary */}
-                                    {isEnded && Object.values(submissions).some(s => s.status === "scored") && (
-                                        <>
-                                            <div className="stats-row-item">
-                                                <span className="text-xs text-sec" style={{ letterSpacing: '1.5px' }}>TOTAL PROFIT</span>
-                                                <span className="orbitron neon-green">
-                                                    ₹{Object.values(submissions).filter(s => s.status === "scored").reduce((acc, s) => acc + (s.profit || 0), 0).toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </>
+                                    {isEnded && Object.values(submissions).some((s) => s.status === "scored") && (
+                                        <div className="flex items-center justify-between rounded-lg border border-white/20 bg-black/30 px-3 py-2">
+                                            <span className="text-sm uppercase tracking-[0.05em] text-slate-300">TOTAL PROFIT</span>
+                                            <span className="font-semibold text-emerald-300">
+                                                ₹{Object.values(submissions).filter((s) => s.status === "scored").reduce((acc, s) => acc + (s.profit || 0), 0).toLocaleString()}
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -505,18 +588,20 @@ export default function TeamPage({ params }) {
                 </div>
             </div>
 
-            {/* Submit Solution Modal */}
             {submitModal && (
-                <div className="modal-overlay active">
-                    <div className="modal-box" style={{ maxWidth: '900px', width: '95%', padding: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-6">
+                    <div className="w-full max-w-5xl rounded-2xl border border-white/20 bg-black/40 p-4 backdrop-blur-md sm:p-6">
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                             <div>
-                                <h3 className="orbitron neon-blue" style={{ marginBottom: '4px', textShadow: '0 0 10px rgba(0,255,255,0.3)' }}>📤 SUBMIT SOLUTION</h3>
-                                <div className="text-xs text-sec">
+                                <h3 className="text-2xl font-semibold uppercase tracking-[0.05em] text-sky-200">📤 SUBMIT SOLUTION</h3>
+                                <div className="text-sm text-slate-200">
                                     {submitModal.bugId} — {submitModal.bugName} · Paid: ₹{submitModal.purchasePrice?.toLocaleString()}
                                 </div>
                             </div>
-                            <button className="btn btn-purple btn-sm" onClick={() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }}>
+                            <button
+                                className="rounded-full border border-fuchsia-300/50 bg-fuchsia-400/20 px-4 py-2 text-sm font-semibold uppercase tracking-[0.05em] text-fuchsia-100 transition hover:bg-fuchsia-400/30"
+                                onClick={() => { setSubmitModal(null); setSolutionCode(""); setSubmitMsg(""); }}
+                            >
                                 CLOSE
                             </button>
                         </div>
@@ -535,12 +620,11 @@ export default function TeamPage({ params }) {
                 </div>
             )}
 
-            {/* Bug Details Modal */}
             <BugDetailsModal
                 bug={viewingBug}
                 onClose={() => setViewingBug(null)}
-                full={isEnded && myData?.purchases?.some(p => (p.bugId === viewingBug?.bugId || p.bugName === viewingBug?.name))}
+                full={Boolean(viewingBug?.showFull)}
             />
-        </>
+        </div>
     );
 }

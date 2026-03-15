@@ -1,6 +1,15 @@
 "use client";
 
+import { useMemo, useState, useEffect } from "react";
+
 export default function BugDetailsModal({ bug, onClose, full = false }) {
+    const languageEntries = useMemo(() => Object.entries(bug?.languageVersions || {}), [bug?.languageVersions]);
+    const [selectedLanguage, setSelectedLanguage] = useState(languageEntries[0]?.[0] || "");
+
+    useEffect(() => {
+        setSelectedLanguage(languageEntries[0]?.[0] || "");
+    }, [bug, languageEntries]);
+
     if (!bug) return null;
 
     const diffColors = {
@@ -10,7 +19,8 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
         Expert: "neon-purple"
     };
 
-    const colorClass = diffColors[bug.difficulty] || "neon-blue";
+    const safeDifficulty = bug?.difficulty || "Medium";
+    const colorClass = diffColors[safeDifficulty] || "neon-blue";
     const colorVar = `var(--${colorClass})`;
 
     // Parse description
@@ -28,6 +38,7 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
 
     const displayContent = full ? (fullPart || previewPart) : previewPart;
     const isCode = full && (fullPart.includes("def ") || fullPart.includes("class ") || fullPart.includes("{") || fullPart.includes(";") || fullPart.includes("import "));
+    const selectedBuggyCode = selectedLanguage ? bug.languageVersions?.[selectedLanguage] : "";
 
     return (
         <div className="modal-overlay active" onClick={onClose}>
@@ -39,9 +50,9 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
 
                 <div className="dossier-content">
                     <div className="dossier-title-row">
-                        <h2 className={`orbitron ${colorClass}`}>{bug.bugName || bug.name}</h2>
-                        <div className={`badge badge-${bug.difficulty.toLowerCase()}`}>
-                            {bug.difficulty}
+                        <h2 className={`orbitron ${colorClass}`}>{bug.bugName || bug.name || "Unknown Bug"}</h2>
+                        <div className={`badge badge-${safeDifficulty.toLowerCase()}`}>
+                            {safeDifficulty}
                         </div>
                     </div>
 
@@ -59,6 +70,27 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
                                 <p className="dossier-desc" style={{ borderLeftColor: colorVar }}>
                                     {displayContent}
                                 </p>
+                            )}
+
+                            {full && languageEntries.length > 0 && (
+                                <>
+                                    <div className="section-label mt-24">BUGGY CODE QUESTION</div>
+                                    <div className="lang-tabs">
+                                        {languageEntries.map(([lang]) => (
+                                            <button
+                                                key={lang}
+                                                className={`lang-tab ${selectedLanguage === lang ? "active" : ""}`}
+                                                onClick={() => setSelectedLanguage(lang)}
+                                                type="button"
+                                            >
+                                                {lang}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <pre className="dossier-code-block">
+                                        {selectedBuggyCode}
+                                    </pre>
+                                </>
                             )}
 
                             {!full && (
@@ -79,7 +111,7 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
                                 </div>
                                 <div className="spec-item">
                                     <div className="spec-label">LEVEL</div>
-                                    <div className={`spec-value ${colorClass}`}>{bug.difficulty}</div>
+                                    <div className={`spec-value ${colorClass}`}>{safeDifficulty}</div>
                                 </div>
                             </div>
                         </div>
@@ -201,7 +233,7 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
                     }
 
                     .dossier-code-block {
-                        font-family: 'Space Mono', monospace;
+                        font-family: var(--font-code);
                         font-size: 0.82rem;
                         line-height: 1.5;
                         color: var(--neon-green);
@@ -213,6 +245,31 @@ export default function BugDetailsModal({ bug, onClose, full = false }) {
                         white-space: pre;
                         box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
                         margin: 0;
+                    }
+
+                    .lang-tabs {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                        margin-bottom: 12px;
+                    }
+
+                    .lang-tab {
+                        border: 1px solid rgba(255, 255, 255, 0.25);
+                        background: rgba(255, 255, 255, 0.04);
+                        color: #d5d6ff;
+                        border-radius: 999px;
+                        padding: 6px 12px;
+                        font-size: 0.72rem;
+                        letter-spacing: 0.06em;
+                        cursor: pointer;
+                        text-transform: uppercase;
+                    }
+
+                    .lang-tab.active {
+                        border-color: var(--neon-green);
+                        color: var(--neon-green);
+                        background: rgba(0, 255, 65, 0.08);
                     }
 
                     .encryption-notice {

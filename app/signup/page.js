@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -34,42 +35,91 @@ export default function SignupPage() {
     };
 
     return (
-        <div className="screen-center">
-            <div className="card join-card border-purple pulse-purple slide-up">
-                <div className="text-xs text-sec mb-8" style={{ letterSpacing: '3px', cursor: 'pointer' }} onClick={() => router.push("/")}>
+        <main
+            className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8 md:justify-end md:px-10"
+            style={{
+                backgroundImage: "url('/Loginback.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+            }}
+        >
+            <div className="absolute inset-0 bg-black/20" />
+
+            <Image
+                className="pointer-events-none absolute bottom-0 left-0 z-0 h-auto w-[min(320px,62vw)] sm:w-[min(420px,54vw)] lg:w-[min(540px,42vw)]"
+                src="/Character3.png"
+                alt="Arena character"
+                width={820}
+                height={1180}
+                priority
+            />
+
+            <section className="slide-up relative z-10 w-full max-w-115 rounded-[28px] border border-white/22 bg-white/14 p-7 text-white shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:p-9 md:mr-8">
+                <button
+                    type="button"
+                    className="mb-5 text-left text-sm tracking-[0.22em] text-white/78 transition hover:text-white"
+                    onClick={() => router.push("/")}
+                >
                     ← BACK TO PORTAL
-                </div>
-                <h1 className="orbitron neon-purple">TEAM REGISTRATION</h1>
-                <p className="subtitle">CREATE YOUR TEAM PROFILE</p>
+                </button>
+
+                <h1 className="text-4xl tracking-[0.08em] text-white sm:text-5xl">TEAM REGISTRATION</h1>
+                <p className="mt-2 text-sm tracking-[0.24em] text-white/72">CREATE YOUR TEAM PROFILE</p>
 
                 {error && (
-                    <div style={{ padding: '10px 14px', borderRadius: '6px', background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', color: '#ff4444', fontSize: '0.85rem', marginBottom: '16px' }}>
+                    <div className="mt-6 rounded-lg border border-red-300/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSignup} style={{ marginTop: '32px' }}>
-                    <div className="input-group">
-                        <label className="input-label">Username</label>
-                        <input type="text" className="input" placeholder="Enter your username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                <form onSubmit={handleSignup} className="mt-8 space-y-5">
+                    <div>
+                        <label className="mb-2 block text-sm tracking-[0.18em] text-white/78">Username</label>
+                        <input
+                            type="text"
+                            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-base text-white outline-none backdrop-blur-md placeholder:text-white/40 focus:border-white/35"
+                            placeholder="Enter your username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                        />
                     </div>
-                    <div className="input-group">
-                        <label className="input-label">Team Name</label>
-                        <input type="text" className="input" placeholder="e.g. Shadow Coders" value={teamName} onChange={(e) => setTeamName(e.target.value)} required />
+                    <div>
+                        <label className="mb-2 block text-sm tracking-[0.18em] text-white/78">Team Name</label>
+                        <input
+                            type="text"
+                            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-base text-white outline-none backdrop-blur-md placeholder:text-white/40 focus:border-white/35"
+                            placeholder="e.g. Shadow Coders"
+                            value={teamName}
+                            onChange={(e) => setTeamName(e.target.value)}
+                            required
+                        />
                     </div>
-                    <div className="input-group mb-32">
-                        <label className="input-label">Password</label>
-                        <input type="password" className="input" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <div>
+                        <label className="mb-2 block text-sm tracking-[0.18em] text-white/78">Password</label>
+                        <input
+                            type="password"
+                            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-base text-white outline-none backdrop-blur-md placeholder:text-white/40 focus:border-white/35"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
                     </div>
-                    <button type="submit" className="btn btn-purple btn-full" disabled={loading}>
-                        {loading ? "CREATING..." : "CREATE TEAM PROFILE →"}
+                    <button
+                        type="submit"
+                        className="w-full rounded-xl border border-white/25 bg-white/18 px-4 py-3 text-lg tracking-[0.08em] text-white transition hover:bg-white/24 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={loading}
+                    >
+                        {loading ? "CREATING..." : "CREATE TEAM PROFILE"}
                     </button>
                 </form>
 
-                <p className="mt-20 text-xs text-sec text-center cursor-pointer" onClick={() => router.push("/join-room")}>
+                <p className="mt-6 cursor-pointer text-center text-sm tracking-[0.12em] text-white/76 transition hover:text-white" onClick={() => router.push("/join-room")}>
                     Already registered? Join a room →
                 </p>
-            </div>
-        </div>
+            </section>
+        </main>
     );
 }

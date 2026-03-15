@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Room from "@/models/Room";
 import RoomPlayer from "@/models/RoomPlayer";
+import Purchase from "@/models/Purchase";
+import PowerCardPurchase from "@/models/PowerCardPurchase";
+import Rebid from "@/models/Rebid";
+import Submission from "@/models/Submission";
 
 export async function GET(request) {
     try {
@@ -40,6 +44,56 @@ export async function GET(request) {
         console.error("Admin rooms error:", error);
         return NextResponse.json(
             { error: "Failed to get rooms" },
+            { status: 500 }
+        );
+    }
+}
+
+export async function DELETE(request) {
+    try {
+        await dbConnect();
+        const { roomId, userId } = await request.json();
+
+        if (!roomId || !userId) {
+            return NextResponse.json(
+                { error: "roomId and userId are required" },
+                { status: 400 }
+            );
+        }
+
+        const room = await Room.findById(roomId);
+        if (!room) {
+            return NextResponse.json(
+                { error: "Room not found" },
+                { status: 404 }
+            );
+        }
+
+        if (room.createdBy?.toString() !== userId) {
+            return NextResponse.json(
+                { error: "You are not allowed to delete this room" },
+                { status: 403 }
+            );
+        }
+
+        await Promise.all([
+            RoomPlayer.deleteMany({ roomId: room._id }),
+            Purchase.deleteMany({ roomId: room._id }),
+            PowerCardPurchase.deleteMany({ roomId: room._id }),
+            Rebid.deleteMany({ roomId: room._id }),
+            Submission.deleteMany({ roomId: room._id }),
+        ]);
+
+        await Room.deleteOne({ _id: room._id });
+
+        return NextResponse.json({
+            success: true,
+            message: "Room deleted permanently",
+        });
+    } catch (error) {
+        console.error("Delete room error:", error);
+        return NextResponse.json(
+            { error: "Failed to delete room" },
             { status: 500 }
         );
     }
